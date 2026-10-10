@@ -100,3 +100,43 @@ func test_draw_while_invulnerable() -> void:
 	main.queue_redraw()
 	await wait_process_frames(2)
 	assert_true(is_instance_valid(main))
+
+
+func test_snake_slides_between_cells() -> void:
+	main.game.set_food([Vector2i(0, 0)])
+	main.game.tick()
+	main._t = 0.5
+	var head: Vector2 = main._part_position(0)
+	var cur := Vector2(main.game.body[0]) + Vector2(0.5, 0.5)
+	var prev := Vector2(main.game.body[1]) + Vector2(0.5, 0.5)
+	assert_eq(head, (prev + cur) / 2.0 * main.CELL)
+
+
+func test_no_slide_when_snake_did_not_move() -> void:
+	main.game.last_tick_moved = false
+	main._t = 0.5
+	assert_eq(main._part_position(0), main._cell_center(main.game.body[0]))
+
+
+func test_food_and_snake_draw_with_many_foods() -> void:
+	main.queue_redraw()
+	await wait_process_frames(2)
+	assert_gt(main.game.foods.size(), 10)
+
+
+func test_tail_stays_put_when_snake_grows() -> void:
+	var head: Vector2i = main.game.body[0]
+	main.game.set_food([head + Vector2i.RIGHT])
+	main.game.tick()
+	main._t = 0.5
+	var last: int = main.game.body.size() - 1
+	assert_eq(main._part_position(last), main._cell_center(main.game.body[last]))
+
+
+func test_tail_slides_from_vacated_cell() -> void:
+	main.game.set_food([Vector2i(0, 0)])
+	main.game.tick()
+	main._t = 0.5
+	var last: int = main.game.body.size() - 1
+	var expected := (Vector2(main.game.tail_vacated) + Vector2(main.game.body[last])) / 2.0
+	assert_eq(main._part_position(last), (expected + Vector2(0.5, 0.5)) * main.CELL)

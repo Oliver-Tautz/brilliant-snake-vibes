@@ -10,3 +10,4 @@ const FOOD_SCORE := 10
 const BASE_INTERVAL := 0.2
 const MIN_INTERVAL := 0.06
 const INTERVAL_DECAY := 0.004
+const CELLS_PER_FOOD := 80  # one food item per this many grid cells

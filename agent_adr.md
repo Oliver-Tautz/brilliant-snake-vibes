@@ -57,3 +57,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: smallest thing that is playable and keeps the no-node-per-cell rule. Deferred to later iterations: input abstraction layer (§13) and touch controls/pause button (§3), interpolated movement (§3), zoom scaling with grid size (§4), pause menu with Resume/Restart/Options/Quit (§12). Movement keys use physical keycodes so WASD works on any layout.
 - Source: spec §3, §4, §13; user answers
 - Revisit if: touch controls or the options menu are added.
+
+## 2026-10-10 — Many food items, one per 80 cells
+- Decision: the grid holds one food item per 80 cells (125 on 100x100, minimum 1). Eating one spawns a replacement elsewhere, so the count stays constant. `CELLS_PER_FOOD` in `logic/game_config.gd`.
+- Decided by: user (asked for far more spawns); claude (the ratio)
+- Why: the camera shows about 1300 of 10000 cells, so this keeps roughly 15 items in view. Scales with the configurable grid size.
+- Source: user feedback after first playtest
+- Revisit if: animals and power-ups arrive; food may become one tier among several. Known: if the board ever fills completely, the food count drops and does not refill.
+
+## 2026-10-10 — Smooth rendering by interpolating one tick behind
+- Decision: the snake is drawn as an antialiased polyline plus round joints and a head with eyes, with each part sliding from its previous cell to its current one over the tick (`last_tick_moved` and `tail_vacated` come from the logic). The camera follows the interpolated head with no extra smoothing. 4x MSAA for 2D; food pulses.
+- Decided by: claude
+- Why: previous 1-cell squares looked jumpy. Interpolating from known previous cells needs no copy of the body per tick. Rendering is one tick behind the logic, a deliberate trade for smoothness.
+- Source: user feedback; spec §3 (smooth interpolated visuals)
+- Revisit if: the one-tick visual lag feels bad on collisions.
