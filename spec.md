@@ -133,9 +133,9 @@ Target mix: the drawing and animation quality of the 1920s references, with the 
 - Asset budget: keep build size small for fast load (target **TBD**).
 
 ## 14. Delivery
-- Repo hosted on GitLab; GitHub is the publishing target.
-- GitLab CI on every push to main: export Godot web build, then push it to the GitHub Pages branch using a token stored as a CI variable.
-- Build fails if the export fails.
+- Repo hosted on GitHub; GitHub Pages is the publishing target.
+- GitHub Actions on every push: run the unit tests and export the Godot web build. Pushes to main also deploy the build to GitHub Pages.
+- Build fails if the tests or the export fail.
 
 ## 15. Open Questions
 - Art and music references.
@@ -156,3 +156,4 @@ Assets are drawn as code (free, no external art or music dependencies):
 - Godot's own shapes, particles and shaders.
 - Best fit: simple, geometric or pixel-style art, UI, tiles and effects.
 - Generator scripts are kept in the repo so assets are reproducible and can be tweaked.
+- Exception: one bundled open-licence (SIL OFL) serif font, since browsers have no system fonts. Credited in CREDITS.md.
