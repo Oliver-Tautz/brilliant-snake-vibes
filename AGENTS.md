@@ -7,3 +7,7 @@ Ask and get an explicit yes first, every time (approval doesn't carry over), bef
 - **Reading or modifying `~/.ssh`**, keys, tokens, or credentials.
 
 State exactly what will change, then wait.
+
+# Decisions
+
+Consult [spec.md](spec.md) before making design or implementation decisions, and follow it. If the spec is silent or ambiguous, ask instead of guessing.
