@@ -1,0 +1,12 @@
+{
+  "name": "brilliant-snake-vibes",
+  "description": "Agent tools for the brilliant-snake-vibes project",
+  "owner": { "name": "Oliver Tautz" },
+  "plugins": [
+    {
+      "name": "snake-tools",
+      "source": "./plugins/snake-tools",
+      "description": "Tools for Claude to build, run and test the Godot Snake game"
+    }
+  ]
+}
