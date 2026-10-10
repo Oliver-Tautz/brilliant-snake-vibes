@@ -50,3 +50,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the web export is out of scope for iteration 1; revisit when the GitLab pipeline is built.
 - Source: reviewer nit
 - Revisit if: an export preset is created (exclude `addons/gut/*`, `tests/*`).
+
+## 2026-10-10 — First playable scene: plain Node2D with custom drawing
+- Decision: `presentation/main.tscn` is one Node2D that draws grid, snake and food with `_draw()` (visible cells only), a smoothed Camera2D following the head, and a CanvasLayer HUD. Keys are handled directly in the scene (WASD/arrows, Esc/P pause, Enter/Space/R restart), cells are 24 px, grid 100x100.
+- Decided by: claude (layout, controls); user (100x100 camera-follow grid, core loop only)
+- Why: smallest thing that is playable and keeps the no-node-per-cell rule. Deferred to later iterations: input abstraction layer (§13) and touch controls/pause button (§3), interpolated movement (§3), zoom scaling with grid size (§4), pause menu with Resume/Restart/Options/Quit (§12). Movement keys use physical keycodes so WASD works on any layout.
+- Source: spec §3, §4, §13; user answers
+- Revisit if: touch controls or the options menu are added.
