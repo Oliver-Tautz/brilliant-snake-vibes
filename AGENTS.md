@@ -1,9 +1,9 @@
 # Agent Rules
 
-## Deletion
+Ask and get an explicit yes first, every time (approval doesn't carry over), before:
 
-- Always ask the user for confirmation before deleting anything. No exceptions.
-- This covers files, directories, branches, tags, remotes, commits, stashes, and repos.
-- It also covers destructive git operations (`reset --hard`, `clean`, `branch -D`, force push, history rewrites) and removing content from existing files.
-- Say exactly what would be deleted, then wait for an explicit yes.
-- Earlier approval does not carry over to later deletions.
+- **Deleting** anything: files, branches, tags, remotes, commits, stashes, repos, or content in existing files. Includes `reset --hard`, `clean`, force push, history rewrites.
+- **Touching anything outside this repo**, e.g. `~/.gitconfig`, other dotfiles, system config.
+- **Reading or modifying `~/.ssh`**, keys, tokens, or credentials.
+
+State exactly what will change, then wait.
