@@ -1,13 +1,15 @@
 # Agent Rules
 
-Ask and get an explicit yes first, every time (approval doesn't carry over), before:
+Ask for an explicit yes first, every time (approval doesn't carry over), before:
 
-- **Deleting** anything: files, branches, tags, remotes, commits, stashes, repos, or content in existing files. Includes `reset --hard`, `clean`, force push, history rewrites.
-- **Touching anything outside this repo**, e.g. `~/.gitconfig`, other dotfiles, system config.
-- **Reading or modifying `~/.ssh`**, keys, tokens, or credentials.
+- **Deleting** anything: files, branches, tags, remotes, commits, stashes, repos, or file content. Includes `reset --hard`, `clean`, force push, history rewrites.
+- **Touching anything outside this repo** (dotfiles, system config).
+- **Reading or modifying `~/.ssh`**, keys, tokens, credentials.
 
 State exactly what will change, then wait.
 
 # Decisions
 
-Consult [spec.md](spec.md) before making design or implementation decisions, and follow it. If the spec is silent or ambiguous, ask instead of guessing.
+- Follow [spec.md](spec.md). If it is silent or ambiguous, ask.
+- Log judgment calls (TBD values, layout, pinned versions, ambiguity resolved, reviewer-driven changes) in [agent_adr.md](agent_adr.md): append-only, `## <date> — <title>` with Decision / Why / Source / Revisit if, a few lines each, committed with the work. Skip routine changes, spec facts and secrets.
+- Suggest spec changes. Don't make them.
