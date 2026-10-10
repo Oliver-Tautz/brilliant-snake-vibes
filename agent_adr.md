@@ -113,3 +113,31 @@ Append-only. Format is defined in AGENTS.md.
 - Why: crash spray always pointed right after a respawn; blood appeared a cell ahead of the mouth; faded splats cost a redraw every frame; a shared scratch array was reallocated every frame (spec §13).
 - Source: reviewer findings
 - Revisit if: pause becomes a real tree pause with a pause menu (spec §12).
+
+## 2026-10-10 — Deploy with GitHub Actions instead of GitLab CI
+- Decision: `.github/workflows/web.yml` installs Godot 4.7.2 and only the web (no-threads) export templates, imports, runs the GUT tests, exports the "Web" preset, and deploys `build/web` to GitHub Pages. It builds on every push and deploys only from `main`.
+- Decided by: user (GitHub Actions); claude (workflow details)
+- Why: the repo lives on GitHub, so Pages can deploy without a token or a GitLab mirror. Running the tests in CI enforces spec §16 before deploying.
+- Source: user answer; deviates from spec §14 (GitLab CI pushing to a Pages branch). Spec change suggested to the user, not made.
+- Revisit if: the repo moves to GitLab as the spec intends.
+
+## 2026-10-10 — Web export preset
+- Decision: `export_presets.cfg` (force-added; the file is in .gitignore) with one "Web" preset: single-threaded (`variant/thread_support=false`, spec §13), excludes `addons/gut/*`, `tests/*` and `tools/*`, includes the font licence.
+- Decided by: claude
+- Why: GitHub Pages cannot send the cross-origin isolation headers threads need; tests and the test framework must not ship (resolves the deferred export-exclusion entry).
+- Source: spec §13; earlier ADR
+- Revisit if: the asset budget target (spec §13 TBD) is set.
+
+## 2026-10-10 — Bundled Old Standard TT for the intertitle text
+- Decision: Old Standard TT (SIL OFL 1.1) is bundled in `presentation/fonts` and used for all HUD and card text; credits in CREDITS.md.
+- Decided by: user (bundle an OFL serif); claude (which font)
+- Why: browsers have no system serif for Godot to use. IM FELL English was tried first but only has old-style figures, so the score's 0 read as an o.
+- Source: user answer; screenshots
+- Revisit if: a hand-lettered title font is wanted for the menu.
+
+## 2026-10-10 — Bundled font is an exception to "assets as code"
+- Decision: the Old Standard TT font is the one external asset; everything else stays generated as code.
+- Decided by: user (approved bundling an OFL serif); reviewer (flagged the §17 deviation)
+- Why: fonts cannot reasonably be drawn as code, and browsers have no system serif.
+- Source: spec §17 deviation; suggested to the user to add a font exception to §17, not changed.
+- Revisit if: a hand-drawn title font is made as code.

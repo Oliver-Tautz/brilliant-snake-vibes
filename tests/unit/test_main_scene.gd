@@ -232,3 +232,8 @@ func test_gore_freezes_while_paused_and_clears_on_restart() -> void:
 	main.game.game_over = true
 	main._handle_key(KEY_ENTER)
 	assert_eq(gore.active_count(), 0)
+
+
+func test_hud_uses_bundled_serif_font() -> void:
+	assert_eq(main._status.get_theme_font("font"), main.SERIF)
+	assert_eq(main._banner.get_theme_font("font"), main.SERIF)

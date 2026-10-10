@@ -5,7 +5,8 @@ const View := preload("res://presentation/view_config.gd")
 const GRID_W := 100
 const GRID_H := 100
 const MAX_TICKS_PER_FRAME := 5
-const SERIF := ["DejaVu Serif", "Liberation Serif", "Noto Serif", "Times New Roman", "serif"]
+## Old Standard TT (SIL OFL 1.1), bundled so the web build gets the same period serif.
+const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 
 var game: SnakeGame
 var paused := false
@@ -29,10 +30,8 @@ var _hud_state := -1
 
 
 func _ready() -> void:
-	var serif := SystemFont.new()
-	serif.font_names = PackedStringArray(SERIF)
 	for label in [_status, _banner]:
-		label.add_theme_font_override("font", serif)
+		label.add_theme_font_override("font", SERIF)
 	_floor.size = Vector2(GRID_W, GRID_H) * View.CELL
 	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 	_new_game()
