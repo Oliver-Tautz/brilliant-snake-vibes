@@ -1,0 +1,6 @@
+{
+  "name": "snake-tools",
+  "version": "0.1.0",
+  "description": "Tools for Claude to build, run and test the Godot Snake game",
+  "author": { "name": "Oliver Tautz" }
+}
