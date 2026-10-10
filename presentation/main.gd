@@ -1,26 +1,18 @@
-## Playable snake scene: draws SnakeGame state and feeds it keyboard input and time.
+## Playable snake scene: runs SnakeGame on a timer, feeds it keyboard input, and drives the views.
 extends Node2D
 
-const CELL := 24
+const View := preload("res://presentation/view_config.gd")
 const GRID_W := 100
 const GRID_H := 100
 const MAX_TICKS_PER_FRAME := 5
-
-const COLOR_FLOOR := Color(0.07, 0.07, 0.07)
-const COLOR_GRID := Color(0.14, 0.14, 0.14)
-const COLOR_WALL := Color(0.9, 0.9, 0.9)
-const COLOR_BODY := Color(0.82, 0.82, 0.82)
-const COLOR_HEAD := Color(1, 1, 1)
-const COLOR_EYE := Color(0.05, 0.05, 0.05)
-const COLOR_FOOD := Color(0.8, 0.05, 0.05)
-const BODY_WIDTH := CELL * 0.78
+const SERIF := ["DejaVu Serif", "Liberation Serif", "Noto Serif", "Times New Roman", "serif"]
 
 var game: SnakeGame
 var paused := false
 
 var _accumulator := 0.0
-var _t := 1.0  # progress through the current tick, 0..1, for smooth movement
-var _points := PackedVector2Array()  # reused every frame
+var _shake := 0.0
+var _pending_eat := Vector2i(-1, -1)  # eaten prey, burst once the drawn head reaches it
 # Last values shown in the HUD; text is only rebuilt when one changes.
 var _hud_score := -1
 var _hud_lives := -1
@@ -28,11 +20,21 @@ var _hud_length := -1
 var _hud_state := -1
 
 @onready var _camera: Camera2D = $Camera2D
-@onready var _status: Label = $HUD/Status
-@onready var _banner: Label = $HUD/Banner
+@onready var _floor: Node2D = $Floor
+@onready var _gore: Node2D = $Gore
+@onready var _world: Node2D = $World
+@onready var _status: Label = $HUD/Status/Label
+@onready var _banner_card: Control = $HUD/Banner
+@onready var _banner: Label = $HUD/Banner/Label
 
 
 func _ready() -> void:
+	var serif := SystemFont.new()
+	serif.font_names = PackedStringArray(SERIF)
+	for label in [_status, _banner]:
+		label.add_theme_font_override("font", serif)
+	_floor.size = Vector2(GRID_W, GRID_H) * View.CELL
+	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 	_new_game()
 
 
@@ -47,57 +49,45 @@ func _process(delta: float) -> void:
 		var ticks := 0
 		while _accumulator >= game.tick_interval() and ticks < MAX_TICKS_PER_FRAME:
 			_accumulator -= game.tick_interval()
+			var head_before := game.body[0]
 			game.tick()
+			_play_events(head_before)
 			ticks += 1
 		_accumulator = minf(_accumulator, game.tick_interval())
-	_t = clampf(_accumulator / game.tick_interval(), 0.0, 1.0) if game.last_tick_moved else 1.0
-	_camera.position = _part_position(0)
+	_world.t = clampf(_accumulator / game.tick_interval(), 0.0, 1.0) if game.last_tick_moved else 1.0
+	if _pending_eat.x >= 0 and _world.t >= 0.85:
+		_burst_pending_eat()
+	_world.eat_pulse = maxf(0.0, _world.eat_pulse - delta)
+	_shake = maxf(0.0, _shake - delta)
+	_camera.position = _world.snake_path()[0]
+	_camera.offset = Vector2(randf() - 0.5, randf() - 0.5) * 18.0 * (_shake / View.SHAKE_TIME)
+	_world.view_rect = _visible_rect()
+	_world.queue_redraw()
 	_update_hud()
-	queue_redraw()
 
 
-func _draw() -> void:
-	var grid_px := Vector2(GRID_W, GRID_H) * CELL
-	draw_rect(Rect2(Vector2.ZERO, grid_px), COLOR_FLOOR)
-	var view := _visible_cells()
-	for x in range(view.position.x, view.end.x + 1):
-		draw_line(Vector2(x, view.position.y) * CELL, Vector2(x, view.end.y) * CELL, COLOR_GRID)
-	for y in range(view.position.y, view.end.y + 1):
-		draw_line(Vector2(view.position.x, y) * CELL, Vector2(view.end.x, y) * CELL, COLOR_GRID)
-	draw_rect(Rect2(Vector2.ZERO, grid_px), COLOR_WALL, false, 4.0)
-
-	var now := Time.get_ticks_msec() / 1000.0
-	for cell in game.foods:
-		if view.has_point(cell):
-			var pulse := 1.0 + 0.12 * sin(now * 6.0 + cell.x * 0.7 + cell.y * 1.3)
-			draw_circle(_cell_center(cell), CELL * 0.36 * pulse, COLOR_FOOD, true, -1.0, true)
-
-	var blink_off := game.invulnerable_time > 0.0 and int(now * 10.0) % 2 == 0
-	if not blink_off:
-		_draw_snake()
+## Gore for what happened on the last tick: a bloody gulp, or a violent crash.
+func _play_events(head_before: Vector2i) -> void:
+	if _pending_eat.x >= 0:  # a new tick started before the last gulp finished
+		_burst_pending_eat()
+	if game.last_eaten.x >= 0:
+		_pending_eat = game.last_eaten
+		_world.dying_prey = _pending_eat
+	if game.last_life_lost:
+		var crash := (View.center(head_before) + View.center(game.last_crash)) / 2.0
+		_gore.burst(crash, 60, 420.0, 5)
+		_shake = View.SHAKE_TIME
 
 
-## Draws the snake as a smooth rounded tube, sliding between cells over each tick.
-func _draw_snake() -> void:
-	var count := game.body.size()
-	_points.resize(count)
-	for i in count:
-		_points[i] = _part_position(i)
-	if count > 1:
-		draw_polyline(_points, COLOR_BODY, BODY_WIDTH, true)
-	var radius := BODY_WIDTH / 2.0
-	var view := Rect2(_camera.get_screen_center_position() - get_viewport_rect().size / _camera.zoom / 2.0,
-			get_viewport_rect().size / _camera.zoom).grow(CELL)
-	for i in range(count - 1, 0, -1):
-		if view.has_point(_points[i]):
-			draw_circle(_points[i], radius, COLOR_BODY, true, -1.0, true)
-	var head := _points[0]
-	draw_circle(head, radius * 1.15, COLOR_HEAD, true, -1.0, true)
-	var forward := Vector2(game.direction)
-	var side := forward.orthogonal()
-	var eye_base := head + forward * radius * 0.35
-	draw_circle(eye_base - side * radius * 0.5, radius * 0.22, COLOR_EYE, true, -1.0, true)
-	draw_circle(eye_base + side * radius * 0.5, radius * 0.22, COLOR_EYE, true, -1.0, true)
+func _burst_pending_eat() -> void:
+	play_eat_effect(_pending_eat)
+	_pending_eat = Vector2i(-1, -1)
+	_world.dying_prey = _pending_eat
+
+
+func play_eat_effect(cell: Vector2i) -> void:
+	_gore.burst(View.center(cell), 22, 260.0, 2)
+	_world.eat_pulse = View.EAT_PULSE
 
 
 func _handle_key(keycode: Key) -> void:
@@ -113,6 +103,7 @@ func _handle_key(keycode: Key) -> void:
 		KEY_ESCAPE, KEY_P:
 			if not game.game_over:
 				paused = not paused
+				_gore.set_process(not paused)
 		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_R:
 			if game.game_over:
 				_new_game()
@@ -125,12 +116,16 @@ func _turn(dir: Vector2i) -> void:
 
 func _new_game() -> void:
 	game = SnakeGame.new(GRID_W, GRID_H, Time.get_ticks_usec())
+	_world.game = game
 	paused = false
+	_gore.set_process(true)
+	_gore.clear()
+	_pending_eat = Vector2i(-1, -1)
+	_world.dying_prey = _pending_eat
 	_accumulator = 0.0
-	_t = 1.0
-	_camera.position = _cell_center(game.body[0])
+	_world.t = 1.0
+	_camera.position = View.center(game.body[0])
 	_update_hud()
-	queue_redraw()
 
 
 func _update_hud() -> void:
@@ -143,38 +138,16 @@ func _update_hud() -> void:
 	_hud_lives = game.lives
 	_hud_length = length
 	_hud_state = state
-	_status.text = "Score %d   Lives %d   Length %d" % [game.score, game.lives, game.body.size()]
+	_status.text = "SCORE  %d     LIVES  %d     LENGTH  %d" % [game.score, game.lives, length]
 	if game.game_over:
-		_banner.text = "GAME OVER\nScore %d\n\nEnter / Space to restart" % game.score
+		_banner.text = "~ THE END ~\n\nScore  %d\n\nPress Enter to begin anew" % game.score
 	elif paused:
-		_banner.text = "PAUSED\n\nEsc / P to resume"
+		_banner.text = "~ INTERMISSION ~\n\nPress Esc to resume"
 	else:
 		_banner.text = ""
+	_banner_card.visible = _banner.text != ""
 
 
-## Position of snake part k, interpolated from where it was one tick ago.
-func _part_position(k: int) -> Vector2:
-	var cur := game.body[k]
-	var prev := cur
-	if _t < 1.0 and game.last_tick_moved:
-		if k < game.body.size() - 1:
-			prev = game.body[k + 1]
-		elif game.tail_vacated.x >= 0:
-			prev = game.tail_vacated
-	if prev == cur or absi(prev.x - cur.x) + absi(prev.y - cur.y) != 1:
-		return _cell_center(cur)
-	return (Vector2(prev).lerp(Vector2(cur), _t) + Vector2(0.5, 0.5)) * CELL
-
-
-func _cell_center(cell: Vector2i) -> Vector2:
-	return (Vector2(cell) + Vector2(0.5, 0.5)) * CELL
-
-
-func _visible_cells() -> Rect2i:
+func _visible_rect() -> Rect2:
 	var size := get_viewport_rect().size / _camera.zoom
-	var top_left := _camera.get_screen_center_position() - size / 2.0
-	var first := Vector2i((top_left / CELL).floor()) - Vector2i.ONE
-	var last := Vector2i(((top_left + size) / CELL).ceil()) + Vector2i.ONE
-	first = first.clamp(Vector2i.ZERO, Vector2i(GRID_W, GRID_H))
-	last = last.clamp(Vector2i.ZERO, Vector2i(GRID_W, GRID_H))
-	return Rect2i(first, last - first)
+	return Rect2(_camera.get_screen_center_position() - size / 2.0, size).grow(View.CELL)

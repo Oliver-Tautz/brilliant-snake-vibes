@@ -71,3 +71,45 @@ Append-only. Format is defined in AGENTS.md.
 - Why: previous 1-cell squares looked jumpy. Interpolating from known previous cells needs no copy of the body per tick. Rendering is one tick behind the logic, a deliberate trade for smoothness.
 - Source: user feedback; spec §3 (smooth interpolated visuals)
 - Revisit if: the one-tick visual lag feels bad on collisions.
+
+## 2026-10-10 — Snake path through cell centres (fixes corner cutting), supersedes per-part interpolation
+- Decision: the snake's drawn centre line runs through the real cell centres; only the head point slides from the previous head cell and the tail end slides from the vacated cell. Segments are drawn without caps plus a circle at every joint.
+- Decided by: claude (after user reported the animation looked wrong)
+- Why: interpolating every part in a straight line cut diagonally across corners. This keeps corners square to the grid and the body length constant during a slide.
+- Source: user feedback; spec §3; verified with screenshots
+- Revisit if: turning should look bendier (e.g. curved corners for the rubber-hose look).
+
+## 2026-10-10 — 1920s ink-on-paper art direction, all drawn as code
+- Decision: low-contrast grey checker floor (shader), black boiling ink outlines at 12 fps with uneven width, white rubber-hose snake with ink bands, pie-cut eyes and fangs, trembling mouse-like prey with ears and curly tails, thick wobbly ink walls, one full-screen film shader (gate weave, 18 fps flicker, grain, scratches, dust, vignette, slight desaturation). Red only for blood. Procedural variation is seeded from divine_inspiration("snake-game").
+- Decided by: claude
+- Why: spec §11 asks for 1920s rubber-hose black and white with red accents only for gore; §17 asks for assets as code. The checker floor gives the grid a period look while staying readable; it was toned down after it read as a transparency pattern.
+- Source: spec §9, §11, §17; user feedback that the art style was wrong
+- Revisit if: hand-drawn sprites replace the procedural drawing.
+
+## 2026-10-10 — Cartoon gore with fixed pools
+- Decision: eating sprays red droplets and two bones and leaves a splat; a crash sprays more, five bones, and shakes the camera. Pools are capped (256 drops, 24 bones, 160 splats in a ring buffer); splats fade over 25 s.
+- Decided by: claude
+- Why: spec §11 Violence and §13 (pooled effects, capped decal count, no per-frame allocation).
+- Source: spec §9, §11, §13
+- Revisit if: profiling on phones shows the splat drawing is too heavy.
+
+## 2026-10-10 — Camera zoom 1.7, MSAA removed, serif system font
+- Decision: camera zoom fixed at 1.7 (about 28 x 16 cells visible). MSAA setting removed. HUD and cards are intertitles (black panel, double white frame) using a SystemFont serif (DejaVu/Liberation/Noto Serif).
+- Decided by: claude
+- Why: at zoom 1 the prey were unreadable. 2D MSAA is not supported by the Compatibility renderer (Godot logged a warning), so it did nothing. SystemFont needs no bundled asset.
+- Source: screenshots; Godot warning; spec §4, §11 UI
+- Revisit if: zoom must scale with grid size (spec §4) or the web build shows the fallback sans font (system fonts are not available in browsers; a bundled OFL serif would fix it, needs user approval as an external asset).
+
+## 2026-10-10 — Screenshot tool for visual checks
+- Decision: `tools/capture.gd` renders the main scene in a fixed 1152x648 offscreen viewport and saves a PNG for staged scenarios (start, paused, play, corners, eat).
+- Decided by: claude
+- Why: headless runs render nothing, and the window manager resizes real windows, so visual problems went unnoticed before.
+- Source: own judgment
+- Revisit if: the Godot MCP gains a screenshot tool.
+
+## 2026-10-10 — Gore timing and lifecycle fixes from review
+- Decision: the logic reports `last_crash` so crash gore lands where the head hit, not where the respawn faces. Eaten prey stays drawn until the sliding head reaches it, then bursts. Gore freezes while paused, clears on restart, and stops redrawing once all splats have faded. Ink helpers use separate scratch arrays.
+- Decided by: reviewer (findings); claude (fixes)
+- Why: crash spray always pointed right after a respawn; blood appeared a cell ahead of the mouth; faded splats cost a redraw every frame; a shared scratch array was reallocated every frame (spec §13).
+- Source: reviewer findings
+- Revisit if: pause becomes a real tree pause with a pause menu (spec §12).

@@ -221,3 +221,29 @@ func test_life_loss_relocates_food_under_new_snake() -> void:
 	assert_eq(game.foods.size(), 2)
 	for cell in game.foods:
 		assert_false(game.body.has(cell))
+
+
+func test_eating_reports_eaten_cell() -> void:
+	game.set_food([Vector2i(6, 5)])
+	game.tick()
+	assert_eq(game.last_eaten, Vector2i(6, 5))
+	game.tick()
+	assert_eq(game.last_eaten, Vector2i(-1, -1))
+
+
+func test_life_loss_is_reported_for_one_tick() -> void:
+	_set_body([Vector2i(9, 5), Vector2i(8, 5), Vector2i(7, 5)])
+	game.tick()
+	assert_true(game.last_life_lost)
+	game.set_food([Vector2i(0, 0)])
+	game.tick()
+	assert_false(game.last_life_lost)
+
+
+func test_crash_cell_is_reported_before_respawn() -> void:
+	_set_body([Vector2i(5, 0), Vector2i(5, 1), Vector2i(5, 2)])
+	game.direction = Vector2i.UP
+	game.tick()
+	assert_true(game.last_life_lost)
+	assert_eq(game.last_crash, Vector2i(5, -1))
+	assert_eq(game.direction, Vector2i.RIGHT)  # respawn resets it, hence last_crash

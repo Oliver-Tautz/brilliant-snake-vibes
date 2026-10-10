@@ -17,6 +17,10 @@ var game_over := false
 # For smooth rendering: did the last tick move the snake, and which tail cell did it vacate?
 var last_tick_moved := false
 var tail_vacated := Vector2i(-1, -1)
+# Events from the last tick, for effects: where food was eaten, and whether a life was lost.
+var last_eaten := Vector2i(-1, -1)
+var last_life_lost := false
+var last_crash := Vector2i.ZERO  # the cell the head tried to enter when a life was lost
 
 var _pending: Array[Vector2i] = []
 var _occupied := PackedInt32Array()  # snake segments per cell, width * height
@@ -67,6 +71,8 @@ func request_turn(dir: Vector2i) -> bool:
 func tick() -> void:
 	last_tick_moved = false
 	tail_vacated = Vector2i(-1, -1)
+	last_eaten = Vector2i(-1, -1)
+	last_life_lost = false
 	if game_over:
 		return
 	if not _pending.is_empty():
@@ -77,12 +83,14 @@ func tick() -> void:
 	var new_head := body[0] + direction
 	if not _in_bounds(new_head):
 		if not invulnerable:
+			last_crash = new_head
 			_lose_life()
 		return
 	var eats := _food_cells[_index(new_head)] == 1
 	# The tail cell is vacated this tick, so moving into it is safe unless we grow.
 	var allowed := 1 if (not eats and new_head == body.back()) else 0
 	if not invulnerable and _occupied[_index(new_head)] > allowed:
+		last_crash = new_head
 		_lose_life()
 		return
 	body.push_front(new_head)
@@ -90,6 +98,7 @@ func tick() -> void:
 	last_tick_moved = true
 	if eats:
 		foods_eaten += 1
+		last_eaten = new_head
 		score += Cfg.FOOD_SCORE
 		foods.erase(new_head)
 		_food_cells[_index(new_head)] = 0
@@ -114,6 +123,7 @@ func _in_bounds(cell: Vector2i) -> bool:
 
 func _lose_life() -> void:
 	lives -= 1
+	last_life_lost = true
 	if lives <= 0:
 		game_over = true
 		return
