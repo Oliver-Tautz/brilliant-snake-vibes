@@ -237,3 +237,9 @@ func test_gore_freezes_while_paused_and_clears_on_restart() -> void:
 func test_hud_uses_bundled_serif_font() -> void:
 	assert_eq(main._status.get_theme_font("font"), main.SERIF)
 	assert_eq(main._banner.get_theme_font("font"), main.SERIF)
+
+
+func test_every_scene_script_loads() -> void:
+	# A script with a parse error would silently drop off its node; catch that here.
+	for path in ["Floor", "Gore", "World", "HUD/Status", "HUD/Banner"]:
+		assert_not_null(main.get_node(path).get_script(), path)

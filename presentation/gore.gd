@@ -7,8 +7,8 @@ const MAX_BONES := 24
 const MAX_SPLATS := 160
 const SPLAT_LIFETIME := 25.0
 const BONE_LIFETIME := 3.0
-const BLOOD := Color(0.74, 0.02, 0.03)
-const BLOOD_DARK := Color(0.45, 0.01, 0.02)
+static var BLOOD: Color = Art.blood  # seed[22]
+static var BLOOD_DARK: Color = Art.blood.darkened(0.35)
 
 var _drop_pos := PackedVector2Array()
 var _drop_vel := PackedVector2Array()
@@ -46,8 +46,12 @@ func _ready() -> void:
 	_splat_age.resize(MAX_SPLATS)
 
 
-## A spray of blood (and optionally bones) bursting out of `at`.
+## A spray of blood (and optionally bones) bursting out of `at`. The amount is scaled by the seed's
+## gore multiplier (seed[14]) and extra bones (seed[15]).
 func burst(at: Vector2, drops: int, force: float, bones: int) -> void:
+	drops = int(drops * Art.gore_amount)
+	if bones > 0:
+		bones += Art.extra_bones
 	for i in drops:
 		if _drop_count >= MAX_DROPS:
 			break

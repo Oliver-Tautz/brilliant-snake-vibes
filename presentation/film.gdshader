@@ -2,7 +2,11 @@
 shader_type canvas_item;
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
+// Strengths come from the divine_inspiration seed (presentation/art_direction.gd).
 uniform float grain = 0.09;
+uniform float flicker = 0.07;
+uniform int scratches = 3;
+uniform float vignette = 0.75;
 uniform float desaturate = 0.2;
 
 float rand(float n) {
@@ -20,10 +24,13 @@ void fragment() {
 
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(col, vec3(lum), desaturate);  // dirty, off colours
-	col *= 0.93 + 0.07 * rand(frame + 3.1);  // flicker
+	col *= 1.0 - flicker + flicker * rand(frame + 3.1);  // flicker
 	col += (rand2(floor(FRAGCOORD.xy / 1.5) + frame) - 0.5) * grain;
 
-	for (int i = 0; i < 3; i++) {  // vertical scratches that come and go
+	for (int i = 0; i < 4; i++) {  // vertical scratches that come and go
+		if (i >= scratches) {
+			break;
+		}
 		float fi = float(i);
 		float x = rand(floor(TIME * 4.0) * 0.37 + fi * 13.1);
 		float on = step(0.55, rand(floor(TIME * 4.0) + fi * 7.7));
@@ -33,6 +40,6 @@ void fragment() {
 	col = mix(col, vec3(0.04), speck);  // dust
 
 	vec2 d = (SCREEN_UV - 0.5) * vec2(1.15, 1.0);
-	col *= 1.0 - 0.75 * smoothstep(0.45, 0.85, length(d));  // vignette
+	col *= 1.0 - vignette * smoothstep(0.45, 0.85, length(d));  // vignette
 	COLOR = vec4(col, 1.0);
 }

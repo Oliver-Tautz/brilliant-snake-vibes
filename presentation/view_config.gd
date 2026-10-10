@@ -2,9 +2,9 @@
 extends RefCounted
 
 const CELL := 24
-const BODY_WIDTH := CELL * 0.78
-const INK_WIDTH := 3.0
-const ZOOM := 1.7  # camera zoom; keeps the snake and prey readable on screen
+static var BODY_WIDTH: float = CELL * Art.body_width  # seed[3]
+static var INK_WIDTH: float = Art.ink_width  # seed[7]
+static var ZOOM: float = Art.zoom  # seed[25]
 const EAT_PULSE := 0.25  # seconds the head stays swollen after a gulp
 const SHAKE_TIME := 0.35
 

@@ -1,6 +1,7 @@
 ## Renders the main scene in a staged state and saves a screenshot.
 ## Usage: godot --path . -s tools/capture.gd -- <out.png> [scenario]
-## Scenarios: start, paused, play (runs live), corners (long snake with turns, mid-tick), eat (gore).
+## Scenarios: start, paused, play (runs live), corners (long snake with turns, mid-tick), eat (gore),
+## edge (snake near the top-left wall). Optional third arg: a WallStyle index to override the seed.
 extends SceneTree
 
 const FRAMES := 30
@@ -19,6 +20,8 @@ func _initialize() -> void:
 		_out = args[0]
 	if args.size() > 1:
 		_scenario = args[1]
+	if args.size() > 2:
+		Art.wall = int(args[2])
 	# Fixed-size offscreen viewport, so the window manager cannot change the capture size.
 	_viewport = SubViewport.new()
 	_viewport.size = Vector2i(1152, 648)
@@ -49,9 +52,9 @@ func _stage() -> void:
 	var game: SnakeGame = _main.game
 	if _scenario == "start" or _scenario == "paused":
 		return
-	# A long snake with several corners around the centre.
+	# A long snake with several corners around the centre (or near the top-left wall for "edge").
 	var cells: Array[Vector2i] = []
-	var c := Vector2i(50, 50)
+	var c := Vector2i(14, 5) if _scenario == "edge" else Vector2i(50, 50)
 	for i in 6:
 		cells.append(c - Vector2i(i, 0))
 	for i in range(1, 5):

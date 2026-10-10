@@ -141,3 +141,49 @@ Append-only. Format is defined in AGENTS.md.
 - Why: fonts cannot reasonably be drawn as code, and browsers have no system serif.
 - Source: spec §17 deviation; suggested to the user to add a font exception to §17, not changed.
 - Revisit if: a hand-drawn title font is made as code.
+
+## 2026-10-10 — Art direction decoded from divine_inspiration("snake-art"), supersedes the hand-picked look
+- Decision: every art parameter is read from one character of the seed `iQArc_U_sXqaOB8InrOqe6h2jRfPE3ajgV9SQ2N7Tdb-C09SiKFe-XgDIDug-dKQ` (`presentation/art_direction.gd`). Value = index in `A-Z a-z 0-9 - _`; continuous values scale into a spec-allowed range, categorical ones take value % options. All options are implemented, so a new seed re-derives the whole look.
+
+  | Pos | Char | Value | Decides | Result |
+  | --- | --- | --- | --- | --- |
+  | 0 | i | 34 | floor pattern (checker, boards, harlequin, polka) | harlequin |
+  | 1 | Q | 16 | floor contrast 0.03–0.10 | 0.048 |
+  | 2 | A | 0 | skin (bands, diamonds, spots, stripe) | bands |
+  | 3 | r | 43 | body width 0.66–0.9 cell | 0.82 |
+  | 4 | c | 28 | head (round, viper, big jaw) | viper |
+  | 5 | _ | 63 | fang length | longest |
+  | 6 | U | 20 | eye size | 0.36 of head |
+  | 7 | _ | 63 | ink width 2–4 px | 4 px |
+  | 8 | s | 44 | line boil 8–14 fps | 12.2 fps |
+  | 9 | X | 23 | boil strength | 0.77 |
+  | 10, 11 | q, a | 42, 26 | prey species (mouse, beetle, chick, frog) | chick, chick |
+  | 12 | O | 14 | prey nervousness | 0.57 |
+  | 13 | B | 1 | prey size 0.28–0.4 cell | 0.28 |
+  | 14 | 8 | 60 | gore multiplier 0.6–1.8 | 1.74 |
+  | 15 | I | 8 | extra bones | 0 |
+  | 16–19 | n, r, O, q | 39, 43, 14, 42 | film grain, flicker, scratches, vignette | 0.10, 0.078, 3, 0.8 |
+  | 20 | e | 30 | wall (single, double, hatched) | single |
+  | 21 | 6 | 58 | card ornament (dots, diamonds, scrolls) | diamonds |
+  | 22 | h | 33 | blood tone, bright to dark red | 0.64, 0.01, 0.02 |
+  | 23, 24 | 2, j | 54, 35 | paper tone, floor tone | 0.96, 0.81 |
+  | 25 | R | 17 | camera zoom 1.5–2.0 | 1.63 |
+
+- Decided by: user (use divine inspiration for every art decision); claude (the decoding scheme, option sets and ranges)
+- Why: the tool asks that its seed drive every decision in a creative task; the earlier art was hand-picked and only used an old seed for wobble noise. Ranges and options keep within spec §11 (black and white, red only for blood, pie-cut eyes, rubber-hose).
+- Source: divine_inspiration("snake-art"); spec §9, §11, §17; user instruction
+- Revisit if: the snake-art seed changes (the test `test_seed_matches_the_stored_inspiration` will flag a mismatch).
+
+## 2026-10-10 — CI fails on script errors
+- Decision: the CI test step also fails when the GUT log contains "SCRIPT ERROR".
+- Decided by: claude (found while adding tests)
+- Why: a test file with a parse error is skipped while GUT still prints "All tests passed" and exits 0, which happened twice in this session.
+- Source: spec §16; reviewer warning
+- Revisit if: GUT starts reporting parse errors as failures.
+
+## 2026-10-10 — Wall variants drawn inward
+- Decision: the DOUBLE wall's second rule and the HATCHED wall's strokes are drawn inside the board; hatching only walks the visible stretch of each edge. Chick beak lengthened to clear the heavy outline.
+- Decided by: reviewer (both variants were invisible on the black outside the board; beak merged into the outline); claude (fixes)
+- Why: any seed must produce a readable look, not just the current one. Verified with `tools/capture.gd -- out.png edge <wall>` for all three styles.
+- Source: reviewer findings
+- Revisit if: the board gets a non-black surround.

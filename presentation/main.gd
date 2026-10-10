@@ -34,6 +34,11 @@ func _ready() -> void:
 		label.add_theme_font_override("font", SERIF)
 	_floor.size = Vector2(GRID_W, GRID_H) * View.CELL
 	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
+	var film := ($Film/Screen as ColorRect).material as ShaderMaterial
+	film.set_shader_parameter("grain", Art.film_grain)  # seed[16]
+	film.set_shader_parameter("flicker", Art.film_flicker)  # seed[17]
+	film.set_shader_parameter("scratches", Art.film_scratches)  # seed[18]
+	film.set_shader_parameter("vignette", Art.vignette)  # seed[19]
 	_new_game()
 
 

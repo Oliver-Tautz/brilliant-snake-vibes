@@ -39,10 +39,12 @@ jobs:
 
       - name: Run unit tests
         shell: bash
-        # GUT can exit 0 without running anything (e.g. a parse error), so also require its summary line.
+        # GUT can exit 0 and still print "All tests passed" when a script fails to parse (that test file
+        # is just skipped), so require the summary line and reject any script error.
         run: |
           godot --headless -s addons/gut/gut_cmdln.gd -gexit 2>&1 | tee gut.log
           grep -q "All tests passed" gut.log
+          ! grep -q "SCRIPT ERROR" gut.log
 
       - name: Export web build
         run: |

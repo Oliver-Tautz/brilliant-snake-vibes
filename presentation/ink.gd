@@ -3,21 +3,21 @@ class_name Ink
 extends RefCounted
 
 const INK := Color(0.05, 0.05, 0.05)
-const PAPER := Color(0.95, 0.95, 0.94)
-const BOIL_FPS := 12.0
-## Seed from divine_inspiration("snake-game"); drives all procedural wobble and variation.
-const INSPIRATION := "MYIalNdXGn6AnfSwyFZAEKbRq_UG97Kx9ueX88VLqHpB1S_vm8YpGEiekdEdq-3T"
+static var PAPER := Color(Art.paper_tone, Art.paper_tone, Art.paper_tone * 0.99)  # seed[23]
 
-static var _seed: int = INSPIRATION.hash()
+# All procedural wobble and variation is seeded from divine_inspiration("snake-art").
+static var _seed: int = Art.SEED.hash()
 # Reused scratch arrays so drawing never allocates per frame.
 static var _tri := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+static var _quad := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+static var _quad_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _fang_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _rect_line := PackedVector2Array()
 
 
-## Frame counter for line boil: lines re-wobble 12 times a second, like redrawn animation cels.
+## Frame counter for line boil: lines re-wobble a few times a second (seed[8]), like redrawn cels.
 static func boil_frame() -> int:
-	return int(Time.get_ticks_msec() * BOIL_FPS / 1000.0)
+	return int(Time.get_ticks_msec() * Art.boil_fps / 1000.0)
 
 
 ## Deterministic pseudo-random value in 0..1 from two ints.
@@ -28,10 +28,10 @@ static func rand(a: int, b: int) -> float:
 	return float(n & 0xFFFFFF) / float(0xFFFFFF)
 
 
-## A small offset that changes every boil frame.
+## A small offset that changes every boil frame, scaled by the seed's boil strength (seed[9]).
 static func wobble(id: int, amount: float) -> Vector2:
 	var f := boil_frame()
-	return Vector2(rand(id, f) - 0.5, rand(id + 7919, f) - 0.5) * 2.0 * amount
+	return Vector2(rand(id, f) - 0.5, rand(id + 7919, f) - 0.5) * 2.0 * amount * Art.boil_amount
 
 
 ## A filled ellipse with an uneven, boiling ink outline.
@@ -115,3 +115,26 @@ static func wobbly_rect(ci: CanvasItem, rect: Rect2, width: float, id: int) -> v
 		k += 1
 	_rect_line[k] = _rect_line[0]
 	ci.draw_polyline(_rect_line, INK, width, true)
+
+
+## A diamond (rhombus) with half-diagonals `r`, filled or outlined.
+static func diamond(ci: CanvasItem, center: Vector2, r: Vector2, color: Color, outline := 0.0) -> void:
+	_quad[0] = center + Vector2(0.0, -r.y)
+	_quad[1] = center + Vector2(r.x, 0.0)
+	_quad[2] = center + Vector2(0.0, r.y)
+	_quad[3] = center + Vector2(-r.x, 0.0)
+	if outline <= 0.0:
+		ci.draw_colored_polygon(_quad, color)
+		return
+	for i in 4:
+		_quad_line[i] = _quad[i]
+	_quad_line[4] = _quad[0]
+	ci.draw_polyline(_quad_line, color, outline, true)
+
+
+## A filled ink triangle (beak, snout tip).
+static func triangle(ci: CanvasItem, a: Vector2, b: Vector2, c: Vector2, color: Color) -> void:
+	_tri[0] = a
+	_tri[1] = b
+	_tri[2] = c
+	ci.draw_colored_polygon(_tri, color)
