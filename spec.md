@@ -149,3 +149,10 @@ Target mix: the drawing and animation quality of the 1920s references, with the 
 - All code must be covered by unit tests.
 - Every change must pass unit tests before it is committed.
 - If tests fail, ask the `change-reviewer` subagent what to do before retrying.
+
+## 17. Asset Pipeline
+Assets are drawn as code (free, no external art or music dependencies):
+- SVG written as markup, or a small Python or Godot script that outputs PNGs.
+- Godot's own shapes, particles and shaders.
+- Best fit: simple, geometric or pixel-style art, UI, tiles and effects.
+- Generator scripts are kept in the repo so assets are reproducible and can be tweaked.
