@@ -1,0 +1,22 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot-specific ignores
+*.translation
+export_presets.cfg
+export_credentials.cfg
+
+# Mono / C# builds
+.mono/
+data_*/
+mono_crash.*.json
+
+# Exported builds
+/build/
+/export/
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
