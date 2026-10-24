@@ -110,3 +110,41 @@ func test_corrupt_highscores_are_dropped() -> void:
 	file.set_value("scores", "table", "not a list")
 	file.save(TEST_PATH)
 	assert_eq(_reloaded().highscores.size(), 0)
+
+
+func test_start_level_and_view_default_and_round_trip() -> void:
+	settings.load_settings()
+	assert_eq(settings.start_level, 1)
+	assert_false(settings.view_fit)
+	settings.set_start_level(4)
+	settings.set_view_fit(true)
+	var fresh := _reloaded()
+	assert_eq(fresh.start_level, 4)
+	assert_true(fresh.view_fit)
+
+
+func test_start_level_is_clamped_to_one_to_ten() -> void:
+	settings.set_start_level(0)
+	assert_eq(settings.start_level, 1)
+	settings.set_start_level(15)
+	assert_eq(settings.start_level, 10)
+
+
+func test_start_level_and_view_emit_changed() -> void:
+	watch_signals(settings)
+	settings.set_start_level(2)
+	settings.set_view_fit(true)
+	assert_signal_emit_count(settings, "changed", 2)
+
+
+func test_bad_saved_start_level_and_view_fall_back() -> void:
+	var file := ConfigFile.new()
+	file.set_value("game", "start_level", 99)
+	file.set_value("game", "view_fit", "yes")
+	file.save(TEST_PATH)
+	var fresh := _reloaded()
+	assert_eq(fresh.start_level, 10)
+	assert_false(fresh.view_fit)
+	file.set_value("game", "start_level", "x")
+	file.save(TEST_PATH)
+	assert_eq(_reloaded().start_level, 1)
