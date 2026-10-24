@@ -4,6 +4,7 @@ extends Node2D
 const View := preload("res://presentation/view_config.gd")
 const Cfg := preload("res://logic/game_config.gd")
 const MAX_TICKS_PER_FRAME := 5
+const HUD_BAND := 76.0  # base pixels the status bar covers at the top of the screen
 ## Old Standard TT (SIL OFL 1.1), bundled so the web build gets the same period serif.
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 const BuildInfo := preload("res://presentation/build_info.gd")
@@ -278,6 +279,7 @@ func _show_options(from: Screen, focus := 0) -> void:
 		["Arrows on touch: %s" % ("Shown" if Settings.show_arrows else "Hidden"), _toggle_arrows],
 		["Start level: %d" % Settings.start_level, _next_start_level],
 		["View: %s" % ("Whole arena" if Settings.view_fit else "Follow"), _toggle_view],
+		["Graphics: %s" % ("Sharp" if Settings.sharp else "Fast"), _toggle_sharp],
 		["Music: %d%%" % Settings.music_volume, _next_music_volume],
 		["Sounds: %d%%" % Settings.sound_volume, _next_sound_volume],
 		["Mute: %s" % ("On" if Settings.muted else "Off"), _toggle_mute],
@@ -309,15 +311,22 @@ func _toggle_view() -> void:
 	_show_options(_options_from, 3)
 
 
+## Sharp draws at the screen's own resolution; Fast draws at the base size and scales the picture up,
+## which is much cheaper on weak graphics but blurry on big screens.
+func _toggle_sharp() -> void:
+	Settings.set_sharp(not Settings.sharp)
+	_show_options(_options_from, 4)
+
+
 ## Volumes step 100, 75, 50, 25, 0 and round again (spec §10).
 func _next_music_volume() -> void:
 	Settings.set_music_volume(_step_down(Settings.music_volume))
-	_show_options(_options_from, 4)
+	_show_options(_options_from, 5)
 
 
 func _next_sound_volume() -> void:
 	Settings.set_sound_volume(_step_down(Settings.sound_volume))
-	_show_options(_options_from, 5)
+	_show_options(_options_from, 6)
 
 
 static func _step_down(percent: int) -> int:
@@ -326,14 +335,14 @@ static func _step_down(percent: int) -> int:
 
 func _toggle_mute() -> void:
 	Settings.set_muted(not Settings.muted)
-	_show_options(_options_from, 6)
+	_show_options(_options_from, 7)
 
 
 ## Not saved: browsers only allow fullscreen right after a click or tap, so it cannot be restored on load.
 func _toggle_fullscreen() -> void:
 	DisplayServer.window_set_mode(
 			DisplayServer.WINDOW_MODE_WINDOWED if is_fullscreen() else DisplayServer.WINDOW_MODE_FULLSCREEN)
-	_show_options(_options_from, 7)
+	_show_options(_options_from, 8)
 
 
 ## iPhone browsers have no fullscreen for a game canvas, so the option is left out there.
@@ -403,6 +412,8 @@ func _update_dpad() -> void:
 
 func _apply_settings() -> void:
 	_gore.set_gore(Settings.gore)
+	get_tree().root.content_scale_mode = (Window.CONTENT_SCALE_MODE_CANVAS_ITEMS if Settings.sharp
+			else Window.CONTENT_SCALE_MODE_VIEWPORT)
 	_update_dpad()
 
 
@@ -457,15 +468,17 @@ func _aim_camera() -> void:
 		_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 		_camera.position = head
 		return
+	# The arena fits the screen below the status bar, so the bar never covers it.
 	var arena := Vector2(game.width, game.height) * View.CELL
-	var screen := get_viewport_rect().size
-	var zoom := maxf(View.MIN_ZOOM, minf(screen.x / (arena.x + View.CELL * 2.0), screen.y / (arena.y + View.CELL * 4.0)))
+	var screen := get_viewport_rect().size - Vector2(0.0, HUD_BAND)
+	var zoom := maxf(View.MIN_ZOOM, minf(screen.x / (arena.x + View.CELL * 2.0), screen.y / (arena.y + View.CELL * 2.0)))
 	_camera.zoom = Vector2(zoom, zoom)
 	var half := screen / zoom / 2.0
 	var centre := arena / 2.0
 	# Centre the arena, or follow the head along any axis where it is bigger than the screen.
-	_camera.position = Vector2(centre.x if half.x * 2.0 >= arena.x else clampf(head.x, half.x, arena.x - half.x),
+	var aim := Vector2(centre.x if half.x * 2.0 >= arena.x else clampf(head.x, half.x, arena.x - half.x),
 			centre.y if half.y * 2.0 >= arena.y else clampf(head.y, half.y, arena.y - half.y))
+	_camera.position = aim - Vector2(0.0, HUD_BAND / 2.0 / zoom)  # the screen centre sits half a band higher
 
 
 func _visible_rect() -> Rect2:

@@ -12,7 +12,8 @@ var _saved_settings: Array
 func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
 	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true),
-			Settings.start_level, Settings.view_fit, Settings.music_volume, Settings.sound_volume, Settings.muted]
+			Settings.start_level, Settings.view_fit, Settings.music_volume, Settings.sound_volume, Settings.muted,
+			Settings.sharp, get_tree().root.content_scale_mode]
 	Settings.path = SETTINGS_PATH
 
 
@@ -26,6 +27,8 @@ func after_all() -> void:
 	Settings.music_volume = _saved_settings[6]
 	Settings.sound_volume = _saved_settings[7]
 	Settings.muted = _saved_settings[8]
+	Settings.sharp = _saved_settings[9]
+	get_tree().root.content_scale_mode = _saved_settings[10]
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
@@ -288,10 +291,10 @@ func test_fullscreen_option_shows_the_window_state() -> void:
 	main.show_title()
 	main._menu.press("Options")
 	var label := "Fullscreen: %s" % ("On" if main.is_fullscreen() else "Off")
-	assert_eq(main._menu.buttons()[7].text, label)
+	assert_eq(main._menu.buttons()[8].text, label)
 	main._menu.press(label)  # headless has no real window; this must just not fail
 	assert_eq(main.screen, main.Screen.OPTIONS)
-	assert_true(main._menu.buttons()[7].has_focus())
+	assert_true(main._menu.buttons()[8].has_focus())
 
 
 func test_start_level_option_sets_where_a_run_begins() -> void:
@@ -326,7 +329,10 @@ func test_whole_arena_view_fits_the_arena() -> void:
 	var arena := Vector2(main.game.width, main.game.height) * View.CELL
 	assert_lt(camera.zoom.x, View.ZOOM)
 	assert_gte(camera.zoom.x, View.MIN_ZOOM)
-	assert_eq(camera.position, arena / 2.0)  # level 1 fits the base screen, so it is centred
+	var band: float = main.HUD_BAND / 2.0 / camera.zoom.y
+	assert_eq(camera.position, arena / 2.0 - Vector2(0.0, band))  # centred in the space below the status bar
+	var top_on_screen: float = (0.0 - camera.position.y) * camera.zoom.y + main.get_viewport_rect().size.y / 2.0
+	assert_gte(top_on_screen, main.HUD_BAND)  # the bar does not cover the arena
 
 
 func test_whole_arena_view_follows_on_a_huge_board() -> void:
@@ -885,9 +891,9 @@ func test_whole_arena_view_centres_one_axis_and_follows_the_other() -> void:
 	main.set_game(SnakeGame.new(100, 10, 1))  # wide and short: fits in height, not in width
 	main._process(0.0)
 	var camera: Camera2D = main.get_node("Camera2D")
-	assert_eq(camera.position.y, 10.0 * View.CELL / 2.0)
 	var half_width := main.get_viewport_rect().size.x / camera.zoom.x / 2.0
 	assert_eq(camera.position.x, maxf(half_width, View.center(main.game.body[0]).x))
+	assert_almost_eq(camera.position.y, 10.0 * View.CELL / 2.0 - main.HUD_BAND / 2.0 / camera.zoom.y, 0.001)
 
 
 func test_music_follows_the_screens() -> void:
@@ -917,7 +923,7 @@ func test_volume_and_mute_options() -> void:
 	main._menu.press("Options")
 	main._menu.press("Music: 100%")
 	assert_eq(Settings.music_volume, 75)
-	assert_true(main._menu.buttons()[4].has_focus())
+	assert_true(main._menu.buttons()[5].has_focus())
 	main._menu.press("Sounds: 100%")
 	main._menu.press("Sounds: 75%")
 	main._menu.press("Sounds: 50%")
@@ -934,3 +940,26 @@ func test_last_ten_seconds_tick() -> void:
 	main.game.level_time = main.Cfg.LEVEL_SECONDS - 9.5
 	main._process(0.0)
 	assert_eq(main._last_tick, 10)
+
+
+func test_graphics_option_switches_sharp_and_fast() -> void:
+	Settings.sharp = true
+	main._apply_settings()
+	assert_eq(main.get_tree().root.content_scale_mode, Window.CONTENT_SCALE_MODE_CANVAS_ITEMS)
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("Graphics: Sharp")
+	assert_false(Settings.sharp)
+	assert_eq(main.get_tree().root.content_scale_mode, Window.CONTENT_SCALE_MODE_VIEWPORT)
+	assert_true(main._menu.buttons()[4].has_focus())
+	main._menu.press("Graphics: Fast")
+	assert_true(Settings.sharp)
+
+
+func test_long_menu_pages_use_two_columns() -> void:
+	main.show_title()
+	assert_eq(main._menu._grid.columns, 1)
+	main._menu.press("Options")
+	assert_eq(main._menu._grid.columns, 2)
+	await wait_process_frames(1)
+	assert_lte(main._menu.size.y, 600.0)  # fits a 648 px high screen

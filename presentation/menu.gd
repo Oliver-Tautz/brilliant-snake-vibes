@@ -27,11 +27,13 @@ class TouchButton extends Button:
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 const PADDING := 34.0
 const ROW_GAP := 10
+const LONG_PAGE := 6  # more buttons than this go into two columns
 
 var _heading := Label.new()
 var _body := Label.new()  # optional smaller text under the heading, e.g. the highscore table
 var _field := LineEdit.new()  # optional text entry, e.g. a name for the highscore table
 var _list := VBoxContainer.new()
+var _grid := GridContainer.new()  # the buttons: one column, or two on long pages so they fit a phone
 
 
 func _ready() -> void:
@@ -51,6 +53,9 @@ func _ready() -> void:
 	_list.add_child(_heading)
 	_list.add_child(_body)
 	_list.add_child(_field)
+	_grid.add_theme_constant_override("v_separation", ROW_GAP)
+	_grid.add_theme_constant_override("h_separation", ROW_GAP * 2)
+	_list.add_child(_grid)
 	add_child(_list)
 
 
@@ -64,15 +69,16 @@ func show_page(heading: String, items: Array, focus := 0, text := "", with_field
 	_field.visible = with_field
 	_field.text = entry
 	for button in buttons():
-		_list.remove_child(button)
+		_grid.remove_child(button)
 		button.queue_free()
+	_grid.columns = 2 if items.size() > LONG_PAGE else 1
 	for item in items:
 		var button := TouchButton.new()
 		button.text = item[0]
 		button.focus_mode = Control.FOCUS_ALL
 		button.pressed.connect(Sound.play.bind(&"click", -4.0))
 		button.pressed.connect(item[1])
-		_list.add_child(button)
+		_grid.add_child(button)
 	_list.reset_size()
 	custom_minimum_size = _list.get_combined_minimum_size() + Vector2.ONE * PADDING * 2.0
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
@@ -115,7 +121,7 @@ func body() -> String:
 
 func buttons() -> Array[Button]:
 	var found: Array[Button] = []
-	for child in _list.get_children():
+	for child in _grid.get_children():
 		if child is Button:
 			found.append(child)
 	return found

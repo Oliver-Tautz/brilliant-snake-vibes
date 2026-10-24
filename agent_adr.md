@@ -412,3 +412,13 @@ Append-only. Format is defined in AGENTS.md.
 - Why: user requests.
 - Source: user messages; spec §6b, §8, §11
 - Revisit if: the virtual keyboard misbehaves on the user's tablet (it is marked experimental in Godot).
+
+## 2026-10-24 — Sharp graphics by default; the status bar no longer covers the arena
+- Decision:
+  - The window now draws at the screen's own resolution (stretch mode canvas_items) instead of rendering at 1152x648 and scaling up. Options gets "Graphics: Sharp / Fast"; Fast goes back to the scaled-up base resolution for weak graphics. This reverses the earlier performance decision as the default: the user found the upscaled picture too pixelated on a big screen, and after batching, sharp drawing measured about 5 ms per frame at 1080p on a fast GPU.
+  - The whole-arena view fits the arena into the space below the status bar (76 base px), so the bar no longer hides the top rows.
+  - Menu pages with more than 6 buttons use two columns, so the options (now 10 buttons) fit a 648 px high screen.
+- Decided by: user (too pixelated, scoreboard covers the screen); claude (Sharp default plus a Fast switch, the bar band, two columns); worker (the sharp setting's storage, from my brief)
+- Why: user reports with a screenshot.
+- Source: user messages; performance numbers in docs/roadmap.md step 1
+- Revisit if: the user's integrated-graphics laptop is slow again in Sharp mode (then Fast could become the default there).
