@@ -110,8 +110,11 @@ func test_every_seed_option_draws() -> void:
 
 
 func test_scene_shaders_get_seed_values() -> void:
+	var fit: bool = Settings.view_fit
+	Settings.view_fit = false  # the follow view uses the seed's zoom
 	var main: Node2D = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
+	Settings.view_fit = fit
 	var floor_mat: ShaderMaterial = main.get_node("Floor").material
 	assert_eq(floor_mat.get_shader_parameter("pattern"), Art.floor_pattern)
 	assert_almost_eq(floor_mat.get_shader_parameter("contrast"), Art.floor_contrast, 0.0001)

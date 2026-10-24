@@ -12,6 +12,10 @@ var eat_pulse := 0.0  ## seconds left of the head's gulp swell
 var view_rect := Rect2()  ## visible world area, for culling
 var dying_prey := Vector2i(-1, -1)  ## eaten prey still drawn until the head reaches it
 var dying_kind := 0  ## its SnakeGame.Food, since its cell is already empty
+## Whole-arena view: arrows ahead of every head, `marker_scale` world units per screen pixel so they keep
+## their size on screen however far the camera zooms out.
+var show_markers := false
+var marker_scale := 1.0
 # Layer switches, used by the benchmark to measure each layer's cost.
 var show_prey := true
 var show_snake := true
@@ -21,6 +25,8 @@ var _path := PackedVector2Array()
 var _enemy_path := PackedVector2Array()
 var _coffin := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 var _coffin_line := PackedVector2Array()
+var _arrow := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+var _arrow_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 var _inked := PackedVector2Array()
 var _tail := PackedVector2Array()
 var _snout := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
@@ -35,6 +41,13 @@ func _ready() -> void:
 ## square. Only the head and the tail end slide, which is what makes the movement smooth.
 func snake_path() -> PackedVector2Array:
 	return _body_path(_path, game.body, game.last_tick_moved, t, game.tail_vacated)
+
+
+## Where a snake's head is drawn this frame: just the first point of _body_path, without the rest.
+static func _head_pos(body: Array[Vector2i], moved: bool, progress: float) -> Vector2:
+	if moved and progress < 1.0 and body.size() > 1:
+		return View.center(body[1]).lerp(View.center(body[0]), progress)
+	return View.center(body[0])
 
 
 ## The same for any snake, written into `out` (reused, so drawing does not allocate).
@@ -71,6 +84,8 @@ func _draw() -> void:
 	var blink_off := game.invulnerable_time > 0.0 and int(now * 10.0) % 2 == 0
 	if show_snake and not blink_off:
 		_draw_snake()
+	if show_snake and show_markers:
+		_draw_markers()
 	if show_walls:
 		_draw_walls()
 
@@ -154,18 +169,45 @@ func _draw_enemy(enemy) -> void:
 	Ink.pie_eye(self, eye_at - side * r * 0.45, r * 0.32, fwd, id + 4)
 
 
-## A pulsing glow behind an enemy's head and neck: the part a bite from the side kills (spec §6b).
-## Muted green is the spec's colour for something vulnerable (§11).
+## A pulsing glow behind the cells of an enemy that a bite from the side kills: its head and the next
+## SnakeGame.Cfg.BITE_CELLS - 1 cells (spec §6b). Muted green is the spec's colour for something
+## vulnerable (§11).
 func _draw_bite_zone(path: PackedVector2Array) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.5)
 	var radius := View.CELL * (0.78 + 0.1 * pulse)
-	var neck := path[1] if path.size() > 1 else path[0]
+	var last := mini(SnakeGame.Cfg.BITE_CELLS, path.size()) - 1
 	for pass_i in 2:  # a thin ink rim, then the glow
 		var r := radius + (View.INK_WIDTH * 0.6 if pass_i == 0 else 0.0)
 		var color := Color(Ink.INK, 0.7) if pass_i == 0 else Color(Ink.VULNERABLE, 0.6 + 0.3 * pulse)
-		Ink.disc(self, path[0], r, color)
-		Ink.bar(self, path[0], neck, r, color)
-		Ink.disc(self, neck, r, color)
+		for k in last + 1:
+			Ink.disc(self, path[k], r, color)
+			if k < last:
+				Ink.bar(self, path[k], path[k + 1], r, color)
+
+
+## An arrow just ahead of each head, pointing where the snake is going: white for the player, the
+## enemies in their own colour.
+func _draw_markers() -> void:
+	_draw_arrow(_head_pos(game.body, game.last_tick_moved, t), Vector2(game.direction), Ink.PAPER)
+	for enemy in game.enemies:
+		if enemy.alive:
+			var progress: float = clampf(enemy.clock / enemy.interval, 0.0, 1.0)
+			_draw_arrow(_head_pos(enemy.body, enemy.last_moved, progress), Vector2(enemy.direction),
+					Ink.SNAKE_COLORS[enemy.species])
+
+
+func _draw_arrow(head: Vector2, dir: Vector2, fill: Color) -> void:
+	var r := 9.0 * marker_scale
+	var base := head + dir * (View.CELL * 0.6 + r * 0.8)
+	var side := dir.orthogonal() * r * 0.8
+	_arrow[0] = base + dir * r * 1.4
+	_arrow[1] = base + side
+	_arrow[2] = base - side
+	for i in 3:
+		_arrow_line[i] = _arrow[i]
+	_arrow_line[3] = _arrow[0]
+	draw_colored_polygon(_arrow, fill)
+	draw_polyline(_arrow_line, Ink.INK, 2.0 * marker_scale, true)
 
 
 func _any_visible(path: PackedVector2Array) -> bool:

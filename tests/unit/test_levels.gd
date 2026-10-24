@@ -349,10 +349,20 @@ func test_biting_the_neck_the_head_just_left_kills_it() -> void:
 	assert_false(game.last_life_lost)
 
 
+func test_biting_two_cells_behind_the_head_still_kills() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 12), 8, Vector2i.DOWN), Vector2i.DOWN)  # 11,10 is 3rd
+	game.tick()
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)
+
+
 func test_biting_further_down_the_body_still_costs_a_life() -> void:
 	game.set_food([])
 	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
-	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 12), 8, Vector2i.DOWN), Vector2i.DOWN)  # 11,10 is 3rd
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 13), 8, Vector2i.DOWN), Vector2i.DOWN)  # 11,10 is 4th
 	game.tick()
 	assert_true(foe.alive)
 	assert_true(game.last_life_lost)

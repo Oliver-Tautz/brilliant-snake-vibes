@@ -151,15 +151,15 @@ func test_highscores_page_from_the_title() -> void:
 	assert_string_contains(main._menu.body(), "1.   ???   90   level 2   2026-02-02")
 	main._menu.press("Back")
 	assert_eq(main.screen, main.Screen.TITLE)
-	assert_true(main._menu.buttons()[2].has_focus())
+	assert_true(main._menu.buttons()[3].has_focus())
 
 
 func test_gore_switch_is_on_the_title() -> void:
 	main.show_title()
 	main._menu.press("Gore: On")
 	assert_false(Settings.gore)
-	assert_eq(main._menu.buttons()[1].text, "Gore: Off")
-	assert_true(main._menu.buttons()[1].has_focus())
+	assert_eq(main._menu.buttons()[2].text, "Gore: Off")
+	assert_true(main._menu.buttons()[2].has_focus())
 
 
 func test_arrow_key_queues_turn() -> void:
@@ -218,7 +218,7 @@ func test_title_has_play_options_and_github() -> void:
 	var texts: Array[String] = []
 	for button in main._menu.buttons():
 		texts.append(button.text)
-	assert_eq(texts, ["Play", "Gore: On", "Highscores", "Options", "GitHub"] as Array[String])
+	assert_eq(texts, ["Play", "How to play", "Gore: On", "Highscores", "Options", "GitHub"] as Array[String])
 	assert_true(main._menu.buttons()[0].has_focus())  # keyboard players can press Enter right away
 
 
@@ -963,3 +963,32 @@ func test_long_menu_pages_use_two_columns() -> void:
 	assert_eq(main._menu._grid.columns, 2)
 	await wait_process_frames(1)
 	assert_lte(main._menu.size.y, 600.0)  # fits a 648 px high screen
+
+
+func test_how_to_play_card() -> void:
+	main.show_title()
+	main._menu.press("How to play")
+	assert_string_contains(main._menu.heading(), "HOW TO PLAY")
+	assert_string_contains(main._menu.body(), "from the side")
+	main._menu.press("Back")
+	assert_eq(main.screen, main.Screen.TITLE)
+	assert_true(main._menu.buttons()[1].has_focus())
+
+
+func test_whole_arena_view_shows_direction_arrows() -> void:
+	main.start_run()
+	main._process(0.0)
+	assert_false(world.show_markers)
+	Settings.view_fit = true
+	main._process(0.0)
+	assert_true(world.show_markers)
+	assert_almost_eq(world.marker_scale, 1.0 / main.get_node("Camera2D").zoom.x, 0.0001)
+	assert_gt(world.marker_scale, 1.0)  # zoomed out, so arrows are drawn bigger in world units
+	main.set_game(SnakeGame.new(40, 30, 1))  # no enemies, so the only arrow is the player's
+	main._process(0.0)
+	var head: Vector2 = world._head_pos(main.game.body, main.game.last_tick_moved, world.t)
+	assert_eq(head, world.snake_path()[0])
+	world.queue_redraw()
+	await wait_process_frames(2)
+	assert_gt(world._arrow[0].x, head.x)  # the last arrow drawn points the way its snake heads
+	assert_almost_eq(world._arrow[0].y, head.y, 0.001)

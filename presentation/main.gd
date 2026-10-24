@@ -95,6 +95,8 @@ func _process(delta: float) -> void:
 	_aim_camera()
 	_camera.offset = Vector2(randf() - 0.5, randf() - 0.5) * 18.0 * (_shake / View.SHAKE_TIME)
 	_world.view_rect = _visible_rect()
+	_world.show_markers = Settings.view_fit
+	_world.marker_scale = 1.0 / _camera.zoom.x
 	_world.queue_redraw()
 	_update_hud()
 
@@ -185,6 +187,7 @@ func show_title(focus := 0) -> void:
 	_set_screen(Screen.TITLE)
 	_menu.show_page("~ BRILLIANT SNAKE VIBES ~", [
 		["Play", start_run],
+		["How to play", _show_how_to],
 		["Gore: %s" % ("On" if Settings.gore else "Off"), _toggle_gore_on_title],
 		["Highscores", _show_highscores],
 		["Options", _show_options.bind(Screen.TITLE)],
@@ -194,12 +197,27 @@ func show_title(focus := 0) -> void:
 
 func _toggle_gore_on_title() -> void:
 	Settings.set_gore(not Settings.gore)
-	show_title(1)
+	show_title(2)
 
 
 func _show_highscores() -> void:
 	_set_screen(Screen.TITLE)
-	_menu.show_page("~ HIGHSCORES ~", [["Back", show_title.bind(2)]], 0, score_table())
+	_menu.show_page("~ HIGHSCORES ~", [["Back", show_title.bind(3)]], 0, score_table())
+
+
+const HOW_TO := """Steer with the arrow keys or WASD, by swiping, or with the on-screen arrows.
+Eat chickens to grow. Orange ones make you grow three times as much.
+Kill all three enemy snakes before the clock runs out to clear the level.
+Bite an enemy's glowing head from the side to kill it.
+Face to face, the longer snake wins.
+Walls, bodies and running out of time cost a life.
+Each level the enemies get faster and the arena smaller.
+Esc or P pauses."""
+
+
+func _show_how_to() -> void:
+	_set_screen(Screen.TITLE)
+	_menu.show_page("~ HOW TO PLAY ~", [["Back", show_title.bind(1)]], 0, HOW_TO)
 
 
 ## The highscore table as lines of text; `mark` is the rank to flag as new.

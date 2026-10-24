@@ -115,12 +115,12 @@ func test_corrupt_highscores_are_dropped() -> void:
 func test_start_level_and_view_default_and_round_trip() -> void:
 	settings.load_settings()
 	assert_eq(settings.start_level, 1)
-	assert_false(settings.view_fit)
+	assert_true(settings.view_fit)  # whole arena by default (spec §4)
 	settings.set_start_level(4)
-	settings.set_view_fit(true)
+	settings.set_view_fit(false)
 	var fresh := _reloaded()
 	assert_eq(fresh.start_level, 4)
-	assert_true(fresh.view_fit)
+	assert_false(fresh.view_fit)
 
 
 func test_start_level_is_clamped_to_one_to_ten() -> void:
@@ -144,7 +144,7 @@ func test_bad_saved_start_level_and_view_fall_back() -> void:
 	file.save(TEST_PATH)
 	var fresh := _reloaded()
 	assert_eq(fresh.start_level, 10)
-	assert_false(fresh.view_fit)
+	assert_true(fresh.view_fit)
 	file.set_value("game", "start_level", "x")
 	file.save(TEST_PATH)
 	assert_eq(_reloaded().start_level, 1)

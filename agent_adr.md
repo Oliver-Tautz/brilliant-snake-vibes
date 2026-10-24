@@ -429,3 +429,24 @@ Append-only. Format is defined in AGENTS.md.
 - Why: "Music restarts all the time ... when I change settings".
 - Source: user messages
 - Revisit if: it still restarts in the browser.
+
+## 2026-10-24 — Direction arrows in the whole-arena view; How to play
+- Decision: in the whole-arena view every snake gets a small arrow just ahead of its head, pointing where it is going: white with an ink rim for the player, and the enemy's own colour for the enemies. The arrows keep a constant size on screen (9 px) however far the camera zooms out. The title card gains "How to play" (second button), a card with eight short lines on the controls, growing, winning a level, side bites, head-on fights, what costs a life, progression and pausing.
+- Decided by: user (markers toward the heads' direction, a small How to on the start menu); claude (arrow look and size, the text)
+- Why: in the zoomed-out view the heads are too small to tell which way they face; new players need the rules.
+- Source: user messages
+- Revisit if: the how-to text gets out of date when the rules change.
+
+## 2026-10-24 — Whole-arena view is the default
+- Decision: the whole-arena view is now the default (Settings.view_fit defaults to true). Spec §4 and §2.1 (How to play) are updated at the user's request. Players who already saved a View choice keep it. Review nits fixed: the arrows compute only the head position instead of rebuilding whole body paths, and the arrow test checks the arrow's position.
+- Decided by: user (default view, How to play in the menu); reviewer (head-only arrow maths, a test that checks something)
+- Why: "also use whole arena as default view I like it better".
+- Source: user message; reviewer findings
+- Revisit if: phones find the zoomed-out view too small (the minimum zoom keeps cells at 14 px).
+
+## 2026-10-24 — Bite zone is the head plus two cells
+- Decision: a side bite kills an enemy when it lands on its head or on either of the next two cells (Cfg.BITE_CELLS = 3, was head plus neck), and the green glow covers exactly those three cells. At level 7 the mamba moves about 1.5 times per player step, so a bite aimed at its head often landed two cells behind it and killed the player.
+- Decided by: user (reported dying on a side bite, with a screenshot; approved the §6b wording); claude (three cells)
+- Why: the rule must hold at the speeds the game actually reaches.
+- Source: user screenshot; enemy speeds in logic/game_config.gd
+- Revisit if: it makes killing too easy at low levels.
