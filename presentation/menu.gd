@@ -30,6 +30,7 @@ const ROW_GAP := 10
 
 var _heading := Label.new()
 var _body := Label.new()  # optional smaller text under the heading, e.g. the highscore table
+var _field := LineEdit.new()  # optional text entry, e.g. a name for the highscore table
 var _list := VBoxContainer.new()
 
 
@@ -42,17 +43,26 @@ func _ready() -> void:
 	_heading.add_theme_font_size_override("font_size", 30)
 	_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body.add_theme_font_size_override("font_size", 19)
+	_field.max_length = Settings.MAX_NAME
+	_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_field.custom_minimum_size = Vector2(320, 0)
+	_field.visible = false
+	_field.text_submitted.connect(func(_text: String) -> void: press_first())  # Enter saves
 	_list.add_child(_heading)
 	_list.add_child(_body)
+	_list.add_child(_field)
 	add_child(_list)
 
 
-## Shows a page: a heading, optional body text and one button per [text, callable] item. `focus` is
-## the button that gets keyboard focus, so a page rebuilt after a change keeps its place.
-func show_page(heading: String, items: Array, focus := 0, text := "") -> void:
+## Shows a page: a heading, optional body text, an optional text field (pre-filled with `entry`) and
+## one button per [text, callable] item. `focus` is the button that gets keyboard focus, so a page
+## rebuilt after a change keeps its place; with a field, the field gets it.
+func show_page(heading: String, items: Array, focus := 0, text := "", with_field := false, entry := "") -> void:
 	_heading.text = heading
 	_body.text = text
 	_body.visible = text != ""
+	_field.visible = with_field
+	_field.text = entry
 	for button in buttons():
 		_list.remove_child(button)
 		button.queue_free()
@@ -70,8 +80,21 @@ func show_page(heading: String, items: Array, focus := 0, text := "") -> void:
 	show()
 	queue_redraw()
 	var shown := buttons()
-	if not shown.is_empty():
+	if with_field:
+		_field.grab_focus()
+		_field.caret_column = entry.length()
+	elif not shown.is_empty():
 		shown[clampi(focus, 0, shown.size() - 1)].grab_focus()
+
+
+func entry_text() -> String:
+	return _field.text
+
+
+func press_first() -> void:
+	var shown := buttons()
+	if not shown.is_empty():
+		shown[0].pressed.emit()
 
 
 func focused_index() -> int:
@@ -136,4 +159,11 @@ static func _make_theme() -> Theme:
 	t.set_color("font_pressed_color", "Button", Color(0.03, 0.03, 0.03))
 	t.set_color("font_hover_pressed_color", "Button", Color(0.03, 0.03, 0.03))
 	t.set_color("font_color", "Label", FRAME)
+	var field := normal.duplicate() as StyleBoxFlat
+	field.border_color = FRAME
+	field.set_border_width_all(2)
+	t.set_stylebox("normal", "LineEdit", field)
+	t.set_stylebox("focus", "LineEdit", focus)
+	t.set_color("font_color", "LineEdit", FRAME)
+	t.set_color("caret_color", "LineEdit", FRAME)
 	return t

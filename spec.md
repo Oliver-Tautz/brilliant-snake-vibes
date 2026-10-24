@@ -79,6 +79,7 @@ Tier 1 is now the chickens above; tiers 2 and 3 are for later.
   - Enemy's head into the player's body: the enemy dies. Trapping them is a way to kill them.
   - Player's head into an enemy's head from the side: the enemy dies, whatever its length. The cell its head has just left counts as the head too, since enemies move between the player's steps.
   - Head-on (the heads meet face to face): the longer snake wins; on a tie the player wins.
+  - The biteable part (head and neck) is marked with a pulsing muted-green glow.
   - Enemies avoid walls, their own bodies and each other; an enemy with no free move dies.
 - Dead enemies burst (gore) and do not come back this level. Their body turns into chickens, one per few segments (**TBD**), tinted in the dead snake's colour; they count as normal chickens.
 - Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.
@@ -97,7 +98,8 @@ Dropped only by animals when caught (chance per tier **TBD**).
 - Level bonus: every category gets round(level x 0.33 x base) extra. Level 3 example: chicken 1 + 1, big chicken 5 + 5, enemy snake 20 + 20.
 - Enemy snakes then lose 1 point per 10 s since the level started (the decay does not scale with the level), never below 5.
 - Score multipliers apply last (**TBD**, suggest).
-- Highscores: the top 10 runs (score, level reached, date) saved in the browser. Shown in the main menu's Highscores page and on the game-over card, with the new entry marked.
+- Highscores: the top 10 runs (name, score, level reached, date) saved in the browser. Shown in the main menu's Highscores page and on the game-over card, with the new entry marked.
+- A run that makes the table asks for the player's name on the game-over card (up to 12 characters; the last name used is offered again). On touch screens, tapping the field opens the browser's on-screen keyboard.
 
 ## 9. Animations
 As many as feasible, all in the hand-drawn style:
@@ -133,7 +135,7 @@ Color is used only to make gameplay elements stand out. Everything else stays bl
 | ------ | -------------------------------- | ----------------------------------------------------------------------- |
 | Red    | Strong, the only saturated color | Blood, damage, life loss, danger telegraph                              |
 | Purple | Muted, sickly                    | Bad power-ups, darkness and smokescreen effects, the purple enemy snake |
-| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals, the green enemy snake   |
+| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals, the green enemy snake, an enemy's biteable head and neck |
 | Orange | Muted, slightly off              | Big chickens                                                            |
 
 - Chickens left by a dead enemy snake take that snake's colour (green, purple, or ink black).

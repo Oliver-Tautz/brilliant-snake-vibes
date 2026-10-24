@@ -208,8 +208,9 @@ func score_table(mark := -1) -> String:
 	var lines: PackedStringArray = []
 	for i in Settings.highscores.size():
 		var entry: Dictionary = Settings.highscores[i]
-		lines.append("%d.   %d   level %d   %s%s" % [i + 1, entry.score, entry.level, entry.date,
-				"   ~ new ~" if i == mark else ""])
+		var who: String = entry.get("name", "")
+		lines.append("%d.   %s   %d   level %d   %s%s" % [i + 1, who if who != "" else "???", entry.score,
+				entry.level, entry.date, "   ~ new ~" if i == mark else ""])
 	return "\n".join(lines)
 
 
@@ -234,9 +235,23 @@ func _show_pause() -> void:
 	])
 
 
+## The end of a run. A score that makes the table first asks for a name (the last one is offered).
 func _show_over() -> void:
 	_set_screen(Screen.OVER)
-	var rank: int = Settings.add_score(game.score, game.level)
+	if Settings.rank_for(game.score) < 0:
+		_show_end_card(-1)
+		return
+	_menu.show_page("~ A NEW HIGHSCORE ~\nScore  %d     Level  %d" % [game.score, game.level],
+			[["Save", _save_score]], 0, "Your name", true, Settings.player_name)
+
+
+func _save_score() -> void:
+	var name: String = _menu.entry_text()
+	Settings.set_player_name(name)
+	_show_end_card(Settings.add_score(game.score, game.level, "", name))
+
+
+func _show_end_card(rank: int) -> void:
 	_menu.show_page("~ THE END ~\nScore  %d     Level  %d" % [game.score, game.level], [
 		["Restart", start_run],
 		["Menu", show_title],

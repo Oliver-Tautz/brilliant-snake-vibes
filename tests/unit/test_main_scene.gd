@@ -98,14 +98,43 @@ func test_time_up_shows_a_card_and_the_level_restarts() -> void:
 
 
 func test_game_over_records_the_score_and_marks_it() -> void:
-	Settings.add_score(500, 4, "2026-01-01")
+	Settings.add_score(500, 4, "2026-01-01", "Ada")
+	Settings.player_name = "Olli"
 	main.game.score = 120
 	main.game.game_over = true
 	main._process(0.0)
+	assert_string_contains(main._menu.heading(), "NEW HIGHSCORE")
+	assert_eq(main._menu.entry_text(), "Olli")  # the last name is offered
+	assert_eq(Settings.highscores.size(), 1)  # not saved before the name is in
+	main._menu._field.text = "Bea"
+	main._menu.press("Save")
 	assert_eq(Settings.highscores.size(), 2)
-	assert_string_contains(main._menu.body(), "500")
-	assert_string_contains(main._menu.body(), "2.   120   level 0")
+	assert_eq(Settings.player_name, "Bea")
+	assert_string_contains(main._menu.heading(), "THE END")
+	assert_string_contains(main._menu.body(), "1.   Ada   500")
+	assert_string_contains(main._menu.body(), "2.   Bea   120   level 0")
 	assert_string_contains(main._menu.body(), "new")
+
+
+func test_enter_in_the_name_field_saves() -> void:
+	main.game.score = 30
+	main.game.game_over = true
+	main._process(0.0)
+	main._menu._field.text = "Cy"
+	main._menu._field.text_submitted.emit("Cy")
+	assert_eq(Settings.highscores[0]["name"], "Cy")
+	assert_true(main._menu.buttons()[0].has_focus())  # Restart, ready for Enter
+
+
+func test_a_score_off_the_table_skips_the_name() -> void:
+	for i in 10:
+		Settings.add_score(1000 + i, 5, "d", "Pro")
+	main.game.score = 3
+	main.game.game_over = true
+	main._process(0.0)
+	assert_string_contains(main._menu.heading(), "THE END")
+	assert_false(main._menu._field.visible)
+	assert_eq(Settings.highscores.size(), 10)
 
 
 func test_highscores_page_from_the_title() -> void:
@@ -116,7 +145,7 @@ func test_highscores_page_from_the_title() -> void:
 	Settings.add_score(90, 2, "2026-02-02")
 	main._menu.press("Back")
 	main._menu.press("Highscores")
-	assert_string_contains(main._menu.body(), "1.   90   level 2   2026-02-02")
+	assert_string_contains(main._menu.body(), "1.   ???   90   level 2   2026-02-02")
 	main._menu.press("Back")
 	assert_eq(main.screen, main.Screen.TITLE)
 	assert_true(main._menu.buttons()[2].has_focus())
@@ -151,6 +180,7 @@ func test_game_over_card_restarts() -> void:
 	main.game.game_over = true
 	main._process(0.0)
 	assert_eq(main.screen, main.Screen.OVER)
+	main._menu.press("Save")  # it makes the empty table, so the name comes first
 	assert_string_contains(main._menu.heading(), "THE END")
 	assert_string_contains(main._menu.heading(), "50")
 	main._menu.press("Restart")

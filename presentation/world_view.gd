@@ -117,6 +117,7 @@ func _draw_enemy(enemy) -> void:
 			return
 	var id: int = 5000 + enemy.species * 1000
 	var fill: Color = Ink.SNAKE_COLORS[enemy.species]
+	_draw_bite_zone(path)
 	_draw_hose(path, View.BODY_WIDTH * 0.5 * ENEMY_WIDTHS[enemy.species], fill, id)
 	var at := _inked[0]
 	var fwd := Vector2(enemy.direction)
@@ -151,6 +152,20 @@ func _draw_enemy(enemy) -> void:
 	var eye_at := at + fwd * r * (0.45 if enemy.species == 1 else 0.2)
 	Ink.pie_eye(self, eye_at + side * r * 0.45, r * 0.32, fwd, id + 3)
 	Ink.pie_eye(self, eye_at - side * r * 0.45, r * 0.32, fwd, id + 4)
+
+
+## A pulsing glow behind an enemy's head and neck: the part a bite from the side kills (spec §6b).
+## Muted green is the spec's colour for something vulnerable (§11).
+func _draw_bite_zone(path: PackedVector2Array) -> void:
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.5)
+	var radius := View.CELL * (0.78 + 0.1 * pulse)
+	var neck := path[1] if path.size() > 1 else path[0]
+	for pass_i in 2:  # a thin ink rim, then the glow
+		var r := radius + (View.INK_WIDTH * 0.6 if pass_i == 0 else 0.0)
+		var color := Color(Ink.INK, 0.7) if pass_i == 0 else Color(Ink.VULNERABLE, 0.6 + 0.3 * pulse)
+		Ink.disc(self, path[0], r, color)
+		Ink.bar(self, path[0], neck, r, color)
+		Ink.disc(self, neck, r, color)
 
 
 func _any_visible(path: PackedVector2Array) -> bool:

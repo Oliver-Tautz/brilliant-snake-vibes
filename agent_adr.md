@@ -402,3 +402,13 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the single-threaded web build would have hitched for hundreds of ms on the title screen.
 - Source: reviewer findings; timing scripts in the session
 - Revisit if: the user wants real sliders.
+
+## 2026-10-24 — Highscore names and the bite zone
+- Decision:
+  - A run that makes the top 10 shows a "~ A NEW HIGHSCORE ~" card with a name field (12 characters, pre-filled with the last name used). Enter or Save records it, then the end card shows the table with names ("???" for unnamed old entries). A run off the table goes straight to the end card.
+  - The web export's experimental virtual keyboard is switched on, so tablets and phones can type.
+  - Each enemy's head and neck (the cells a side bite kills) get a pulsing pale-green glow with a thin ink rim, drawn behind the snake. Green is the spec's colour for something vulnerable.
+- Decided by: user (names for highscores, marking the biteable part); claude (the name card flow, length, glow look); worker (name storage and rank_for, from my brief)
+- Why: user requests.
+- Source: user messages; spec §6b, §8, §11
+- Revisit if: the virtual keyboard misbehaves on the user's tablet (it is marked experimental in Godot).
