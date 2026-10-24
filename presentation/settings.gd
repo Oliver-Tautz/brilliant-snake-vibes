@@ -21,10 +21,10 @@ func load_settings() -> void:
 	var file := ConfigFile.new()
 	if file.load(path) != OK:
 		return
-	var saved_violence = file.get_value("game", "violence", violence)
+	var saved_violence: Variant = file.get_value("game", "violence", violence)
 	if typeof(saved_violence) == TYPE_INT:
 		violence = clampi(saved_violence, Violence.FULL, Violence.NONE)
-	var saved_arrows = file.get_value("game", "show_arrows", show_arrows)
+	var saved_arrows: Variant = file.get_value("game", "show_arrows", show_arrows)
 	if typeof(saved_arrows) == TYPE_BOOL:
 		show_arrows = saved_arrows
 

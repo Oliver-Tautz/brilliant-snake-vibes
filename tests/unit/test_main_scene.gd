@@ -132,6 +132,21 @@ func test_path_keeps_corners_on_cell_centres() -> void:
 	assert_eq(path[4], View.center(Vector2i(4, 8)).lerp(View.center(Vector2i(4, 7)), 0.25))
 
 
+func test_skin_marks_slide_with_the_head() -> void:
+	main.game.set_food([])
+	main.game.set_body([Vector2i(9, 5), Vector2i(8, 5), Vector2i(7, 5), Vector2i(6, 5), Vector2i(5, 5)])
+	main.game.last_tick_moved = true
+	world.t = 0.0  # start of the tick: where the mark was at the end of the last one
+	assert_eq(world.skin_mark_at(2), View.center(Vector2i(6, 5)))
+	world.t = 0.5
+	assert_eq(world.skin_mark_at(2), (View.center(Vector2i(7, 5)) + View.center(Vector2i(6, 5))) / 2.0)
+	world.t = 1.0
+	assert_eq(world.skin_mark_at(2), View.center(Vector2i(7, 5)))
+	main.game.last_tick_moved = false
+	world.t = 0.5
+	assert_eq(world.skin_mark_at(2), View.center(Vector2i(7, 5)))
+
+
 func test_no_slide_when_snake_did_not_move() -> void:
 	main.game.last_tick_moved = false
 	world.t = 0.5

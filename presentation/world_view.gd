@@ -88,7 +88,9 @@ func _draw_snake() -> void:
 	_draw_head(_inked[0])
 
 
-## Skin markings on the straight parts of the body (seed[2]).
+## Skin markings (seed[2]). Mark i sits i cells behind the head, so during a tick every mark slides
+## one cell forward along the body together with the head; tied to cells they would hop each tick.
+## Marks are left out around corners.
 func _draw_skin(path: PackedVector2Array, half: float, cull: Rect2) -> void:
 	var count := path.size()
 	if Art.skin == Art.SkinPattern.STRIPE:
@@ -96,22 +98,40 @@ func _draw_skin(path: PackedVector2Array, half: float, cull: Rect2) -> void:
 			if cull.has_point(_inked[i]):
 				draw_line(_inked[i], _inked[i + 1], Ink.INK, 2.0, true)
 		return
-	for i in range(2, count - 1):
-		var along := path[i - 1] - path[i + 1]
-		if not cull.has_point(_inked[i]) or not (is_zero_approx(along.x) or is_zero_approx(along.y)):
+	var body := game.body
+	var lag := 1.0 - t if game.last_tick_moved else 0.0
+	for i in range(2, body.size() - 2):
+		var a := i + int(lag >= 0.5)  # the cell the mark is nearest to
+		if a + 1 >= body.size() or not _is_straight(body, a):
 			continue
-		var across := along.orthogonal().normalized() * half
+		var at := skin_mark_at(i) + Ink.wobble(i * 31, 0.8).lerp(Ink.wobble((i + 1) * 31, 0.8), lag)  # boil with the hose
+		if not cull.has_point(at):
+			continue
+		var across := Vector2(body[i] - body[i + 1]).orthogonal() * half
 		match Art.skin:
 			Art.SkinPattern.BANDS:
 				if i % 3 == 0:
-					draw_line(_inked[i] - across * 0.8, _inked[i] + across * 0.8, Ink.INK, 2.0, true)
+					draw_line(at - across * 0.8, at + across * 0.8, Ink.INK, 2.0, true)
 			Art.SkinPattern.DIAMONDS:
 				if i % 2 == 0:
-					Ink.diamond(self, _inked[i], Vector2.ONE * half * 0.45, Ink.INK, 1.8)
+					Ink.diamond(self, at, Vector2.ONE * half * 0.45, Ink.INK, 1.8)
 			Art.SkinPattern.SPOTS:
 				if i % 2 == 1:
 					var sway := 0.35 if i % 4 == 1 else -0.35
-					Ink.disc(self, _inked[i] + across * sway, half * 0.22, Ink.INK)
+					Ink.disc(self, at + across * sway, half * 0.22, Ink.INK)
+
+
+## Where skin mark i is drawn this frame: on its cell at the end of a tick, one cell further back at
+## the start, so marks move with the head.
+func skin_mark_at(i: int) -> Vector2:
+	var lag := 1.0 - t if game.last_tick_moved else 0.0
+	return View.center(game.body[i]).lerp(View.center(game.body[i + 1]), lag)
+
+
+## True when body[a] is not a corner: its neighbours on both sides lie in one line.
+static func _is_straight(body: Array[Vector2i], a: int) -> bool:
+	var along := body[a - 1] - body[a + 1]
+	return along.x == 0 or along.y == 0
 
 
 ## Head with squash and stretch, pie-cut eyes and fangs. Shape from seed[4], fang length seed[5],
@@ -121,7 +141,7 @@ func _draw_head(at: Vector2) -> void:
 	var side := fwd.orthogonal()
 	var angle := fwd.angle()
 	var gulp := eat_pulse / View.EAT_PULSE
-	var r := View.BODY_WIDTH * 0.72
+	var r := View.CELL * 0.5  # a big cartoon head on a thin hose body
 	var ink := View.INK_WIDTH
 	var radii := Vector2(r * (1.2 - 0.15 * gulp), r * (1.0 + 0.35 * gulp))  # squash and stretch
 	var front := r * 1.05

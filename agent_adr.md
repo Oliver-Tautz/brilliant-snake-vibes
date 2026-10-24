@@ -257,3 +257,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the hook blocks every tool, so asking the agent to update a file could never succeed.
 - Source: reviewer finding raised with the user
 - Revisit if: a progress file is introduced and should pass the hook.
+
+## 2026-10-24 — Thinner snake body, sliding skin marks
+- Decision: seed[3] now maps to a body width of 0.32–0.45 of a cell (was 0.66–0.9), so parallel rows of a long snake keep floor between them; the head keeps a fixed cartoon size (half a cell) instead of scaling with the body. Skin marks are counted from the head and slide one cell per tick with the head, instead of being tied to segments and hopping every tick.
+- Decided by: claude (user reported that a long snake looks wrong)
+- Why: with the old width the ink outlines of neighbouring rows overlapped, so a coiled snake read as one brick-patterned block; the marks jumped every tick.
+- Source: user report; screenshots of a 71-cell serpentine; test_neighbouring_rows_of_the_snake_do_not_touch
+- Revisit if: the snake looks too thin on phones.
+
+## 2026-10-24 — Settings autoload
+- Decision: `presentation/settings.gd`, autoloaded as `Settings`, stores violence level (full / low / none) and on-screen arrows (shown / hidden) in `user://settings.cfg`; wrong-typed saved values fall back to defaults. Fullscreen is not stored: browsers only allow it from a click, so it cannot be restored on load.
+- Decided by: user (violence switch, arrows toggle, fullscreen option); claude (storage format, fullscreen not saved)
+- Why: spec §13 asks for settings stored locally via an autoload.
+- Source: user request; spec §13
+- Revisit if: more options (start level, grid size, audio) are added.
