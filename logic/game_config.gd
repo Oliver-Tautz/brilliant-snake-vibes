@@ -37,8 +37,8 @@ const LEVEL_SECONDS := 120.0
 
 # Enemy snakes (spec §6b), by EnemySnake.Species: anaconda, cobra, mamba
 const ENEMY_START_LENGTH := 5
-const ENEMY_INTERVAL: Array[float] = [0.3, 0.2, 0.13]  # seconds per move at level 1
-const ENEMY_SPEEDUP := 0.93  # interval factor per level
+const ENEMY_INTERVAL: Array[float] = [0.42, 0.3, 0.2]  # seconds per move at level 1 (the player starts at 0.2)
+const ENEMY_SPEEDUP := 0.9  # interval factor per level: by level 10 they move at 0.39 x these
 const ENEMY_FLEE: Array[float] = [1.0, 3.0, 6.0]  # how hard a shorter enemy keeps away from the player's head
 const FLEE_RANGE := 6
 const FLOOD_CAP := 30

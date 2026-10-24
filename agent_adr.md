@@ -369,3 +369,14 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the spec lists both options; both are cheap.
 - Source: spec §2, §4, §5
 - Revisit if: the minimum on-screen snake size (spec §4 TBD) is decided.
+
+## 2026-10-24 — Head bites from the side always kill; slower enemies
+- Decision:
+  - Biting an enemy's head from the side kills it whatever its length; only face to face does the longer snake win (a tie goes to the player).
+  - The cell an enemy's head has just left (its neck) counts as its head, because enemies move between the player's steps and a well-aimed bite would otherwise land on the body.
+  - Symmetrically, an enemy whose head runs into the player's head from the side dies (it is the player's body), and enemies only lunge at the player's head face to face when longer.
+  - Enemies move every 0.42 / 0.3 / 0.2 s on level 1 (was 0.3 / 0.2 / 0.13) and speed up by 0.9 per level, so level 10 is about as fast as before (mamba 0.077 s). In bot simulations a greedy bot now reaches level 4 instead of 3.
+- Decided by: user (side bites kill, level 1 too hard); claude (the neck counting as the head, the symmetric enemy rule, the speeds); reviewer (the symmetric rule had to match §6b)
+- Why: the user died biting heads from the side; the spec's contact list already made an enemy's head into the player's body fatal for the enemy.
+- Source: user messages; spec §6b
+- Revisit if: the user does not want the neck counted as the head.

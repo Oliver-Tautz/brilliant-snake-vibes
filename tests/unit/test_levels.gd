@@ -183,13 +183,32 @@ func test_shorter_enemy_avoids_the_player_head() -> void:
 	assert_eq(game.lives, Cfg.LIVES)
 
 
-func test_longer_enemy_bites_the_player_head() -> void:
+func test_longer_enemy_wins_face_to_face() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 10), 6, Vector2i.LEFT), Vector2i.LEFT)
+	game._step_enemy(foe)
+	assert_true(game.last_life_lost)
+	assert_true(foe.alive)
+
+
+func test_enemy_into_the_player_head_from_the_side_dies() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(10, 9), 6, Vector2i.DOWN), Vector2i.DOWN)
+	game._move_enemy(foe, Vector2i.DOWN)  # the AI avoids this; the rule still has to hold
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)
+
+
+func test_longer_enemy_does_not_lunge_from_the_side() -> void:
 	game.set_food([])
 	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
 	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(10, 9), 6, Vector2i.DOWN), Vector2i.DOWN)
 	game._step_enemy(foe)
-	assert_true(game.last_life_lost)
-	assert_true(foe.alive)
+	assert_ne(foe.body[0], Vector2i(10, 10))
+	assert_false(game.last_life_lost)
 
 
 func test_enemies_move_on_their_own_clock() -> void:
@@ -308,3 +327,32 @@ func test_level_ten_is_still_playable() -> void:
 		if enemy.alive:
 			for cell in enemy.body:
 				assert_gt(game._enemy_cells[game._index(cell)], 0)
+
+
+func test_biting_a_longer_enemy_head_from_the_side_kills_it() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)  # keeps the level going
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 10), 8, Vector2i.DOWN), Vector2i.DOWN)  # heading down
+	game.tick()
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)
+
+
+func test_biting_the_neck_the_head_just_left_kills_it() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 11), 8, Vector2i.DOWN), Vector2i.DOWN)  # neck at 11,10
+	game.tick()
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)
+
+
+func test_biting_further_down_the_body_still_costs_a_life() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 12), 8, Vector2i.DOWN), Vector2i.DOWN)  # 11,10 is 3rd
+	game.tick()
+	assert_true(foe.alive)
+	assert_true(game.last_life_lost)

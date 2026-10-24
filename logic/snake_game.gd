@@ -169,9 +169,12 @@ func tick() -> void:
 			last_crash = new_head
 			_lose_life()
 		return
-	var foe = _enemy_with_head(new_head)
-	if foe != null:  # head-on: the longer snake wins, a tie goes to the player
-		if body.size() >= foe.body.size():
+	var foe = _enemy_bitten(new_head)
+	if foe != null:
+		# Biting the head from the side always kills it. Only when the heads meet head-on does the
+		# longer snake win (a tie goes to the player).
+		var head_on: bool = foe.body[0] == new_head and foe.direction == -direction
+		if not head_on or body.size() >= foe.body.size():
 			_kill_enemy(foe)
 			if level_won:
 				return
@@ -413,6 +416,18 @@ func hop_at(cell: Vector2i) -> int:
 	return -1
 
 
+## The enemy whose head is at `cell`, or whose head just left it (its neck): fast enemies move between
+## the player's steps, so a bite that was aimed at the head still counts.
+func _enemy_bitten(cell: Vector2i):
+	var foe = _enemy_with_head(cell)
+	if foe != null:
+		return foe
+	for enemy in enemies:
+		if enemy.alive and enemy.body.size() > 1 and enemy.body[1] == cell:
+			return enemy
+	return null
+
+
 func _enemy_with_head(cell: Vector2i):
 	for enemy in enemies:
 		if enemy.alive and enemy.body[0] == cell:
@@ -427,11 +442,17 @@ func _step_enemy(enemy) -> void:
 	if dir == Vector2i.ZERO:  # no free move
 		_kill_enemy(enemy)
 		return
+	_move_enemy(enemy, dir)
+
+
+## Moves an enemy one cell and applies the contact rules (spec §6b). The AI never picks a deadly move
+## on purpose; the side-bite branch below is the rule for when one happens anyway.
+func _move_enemy(enemy, dir: Vector2i) -> void:
 	var target: Vector2i = enemy.body[0] + dir
-	if target == body[0]:  # head-on: the longer snake wins, a tie goes to the player
+	if target == body[0]:  # face to face the longer snake wins (a tie goes to the player); from the side it dies
 		if invulnerable_time > 0.0:
 			return
-		if enemy.body.size() > body.size():
+		if dir == -direction and enemy.body.size() > body.size():
 			last_crash = target
 			_lose_life()
 		else:
@@ -468,7 +489,7 @@ func _choose_dir(enemy) -> Vector2i:
 		var cell := head + dir
 		if not _in_bounds(cell) or _enemy_cells[_index(cell)] > 0:
 			continue
-		var bite := cell == body[0]
+		var bite := cell == body[0] and dir == -direction  # it only lunges face to face
 		if (_occupied[_index(cell)] > 0 and not bite) or (bite and shorter):
 			continue
 		var value := _rng.randf() * 1.5

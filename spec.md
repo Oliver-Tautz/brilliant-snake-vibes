@@ -77,7 +77,8 @@ Tier 1 is now the chickens above; tiers 2 and 3 are for later.
 - Contact rules (bodies are walls):
   - Player's head into an enemy's body: the player loses a life.
   - Enemy's head into the player's body: the enemy dies. Trapping them is a way to kill them.
-  - Head-on (the heads meet): the longer snake wins; on a tie the player wins. So biting an enemy's head kills it only if the player is at least as long.
+  - Player's head into an enemy's head from the side: the enemy dies, whatever its length. The cell its head has just left counts as the head too, since enemies move between the player's steps.
+  - Head-on (the heads meet face to face): the longer snake wins; on a tie the player wins.
   - Enemies avoid walls, their own bodies and each other; an enemy with no free move dies.
 - Dead enemies burst (gore) and do not come back this level. Their body turns into chickens, one per few segments (**TBD**), tinted in the dead snake's colour; they count as normal chickens.
 - Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.
