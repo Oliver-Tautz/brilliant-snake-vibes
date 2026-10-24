@@ -271,3 +271,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: spec §13 asks for settings stored locally via an autoload.
 - Source: user request; spec §13
 - Revisit if: more options (start level, grid size, audio) are added.
+
+## 2026-10-24 — Menus and violence levels
+- Decision: one intertitle menu card (`presentation/menu.gd`) serves every screen: title (Play, Options, GitHub), pause (Resume, Restart, Options, Quit to menu, GitHub), options (Violence Full/Low/None, Arrows on touch Shown/Hidden, Fullscreen On/Off, Back) and game over (score, Restart, Menu). Option buttons cycle their value when pressed. Esc/P resumes from pause and goes back from the options. The game opens on the title card. Tap-anywhere to resume or restart is gone: menus are buttons, and a tap on a button would otherwise also count as a board tap. Violence Low = black ink splotches that fade in 3 s, half the drops, no bones; None = a small grey dust puff with three spinning stars, no stains. Changing the level wipes the gore on screen.
+- Decided by: user (menu, violence switch, arrows toggle, fullscreen); claude (layout, item order, Low/None looks as proposed in docs/roadmap.md, dropping tap-to-confirm)
+- Why: spec §2 and §12 list these menus; the user asked for the three options.
+- Source: user request; spec §2, §12; roadmap step 3
+- Revisit if: spec §11 ("heavy effects always on", violence list) is changed or kept; start level, grid size, view and audio options get added; local best on the game-over card (spec §2) is built.
+
+## 2026-10-24 — Menu review findings
+- Decision: gore keeps running behind the game-over card (it only freezes in the pause and options menus). Menu buttons react to any finger, not only the first, and ignore the click Godot emulates from that finger. Fullscreen is left out of the options on iPhone browsers, and its label refreshes when the window changes size. Tests restore the Settings autoload's values afterwards. Not changed: GUT's orphan warnings from menu buttons freed with queue_free (a button rebuilds the page from inside its own pressed signal, so it cannot be freed right away); held arrow keys can move focus on the game-over card (harmless); a tap on a menu button does not count as the first touch for showing the D-pad (only matters where the browser does not report a touch screen); the options page is rebuilt on every window resize while open (harmless).
+- Decided by: reviewer (findings); claude (fixes and the three left as they are)
+- Why: the death splatter froze mid-air; a resting thumb blocked menu taps.
+- Source: reviewer findings
+- Revisit if: the tablet test shows menu or fullscreen problems.

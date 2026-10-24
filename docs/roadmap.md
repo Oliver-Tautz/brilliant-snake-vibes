@@ -43,16 +43,17 @@ Ideas (to pick from):
 - Faster starting speed and steeper speed ramp.
 - Longer starting snake.
 
-## 3. Menu and options, with a low-violence option — proposed
-- Main menu (spec §2): Play, Options, link to GitHub, as an intertitle card.
-- Options (spec §2, §4, §5): violence level, start level, grid size, view (follow / fit), later audio and touch mode.
-- Pause menu (spec §12): Resume, Restart, Options, Quit to menu.
-- Settings saved locally (spec §13), via a Settings autoload.
+## 3. Menu and options, with a low-violence option — done (waiting for the user's tablet test)
+- Title card: Play, Options, GitHub. Pause card: Resume, Restart, Options, Quit to menu, GitHub.
+  Game-over card: score, Restart, Menu. All intertitle cards with buttons (keyboard, mouse, touch).
+- Options: Violence (Full / Low / None), Arrows on touch (Shown / Hidden), Fullscreen (On / Off).
+  Violence and arrows are saved locally (`Settings` autoload); fullscreen is not, browsers only allow it after a tap.
 - Violence levels:
-  - Full (default): current blood, bones and splats.
-  - Low: no red, no bones; ink splotches that fade fast.
-  - None: cartoon puff of dust and stars, no stains.
-- Spec §11 (Violence, "heavy effects always on") needs a change to allow this.
+  - Full (default): blood, bones and splats.
+  - Low: black ink splotches that fade in 3 s, no bones.
+  - None: dust puff and spinning stars, no stains.
+- Spec changes suggested to the user (not made): §11 Violence and "heavy effects always on"; §2 options list.
+- Still open from spec §2/§4/§5/§8: start level, grid size, view (follow / fit), audio, local best on the game-over card.
 
 ## Spec drift to fix
 - §1 still says "via a GitLab pipeline"; §14 now says GitHub Actions.

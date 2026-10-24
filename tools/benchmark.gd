@@ -74,7 +74,7 @@ func _process(_delta: float) -> bool:
 ## A long snake winding around the camera, normal prey density, and steady gore.
 func _stage() -> void:
 	_main.set_process(false)  # the benchmark drives redraws itself; the game does not tick
-	_main.get_node("HUD/Banner").visible = false
+	_main.get_node("HUD/Menu").visible = false
 	var game: SnakeGame = _main.game
 	var cells: Array[Vector2i] = []
 	for row in 12:

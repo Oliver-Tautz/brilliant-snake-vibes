@@ -1,5 +1,6 @@
 ## Pooled cartoon gore: blood droplets, flying bones, and floor splats that fade.
-## Fixed-size pools, so spawning and drawing never allocate.
+## Fixed-size pools, so spawning and drawing never allocate. The violence setting tones it down:
+## LOW is black ink that fades fast, with no bones; NONE is a puff of dust with spinning stars.
 extends Node2D
 
 const MAX_DROPS := 256
@@ -7,8 +8,17 @@ const MAX_BONES := 24
 const MAX_SPLATS := 160
 const SPLAT_LIFETIME := 25.0
 const BONE_LIFETIME := 3.0
+const Violence := preload("res://presentation/settings.gd").Violence
 static var BLOOD: Color = Art.blood  # seed[22]
 static var BLOOD_DARK: Color = Art.blood.darkened(0.35)
+const LOW_SPLAT_LIFETIME := 3.0
+const DUST := Color(0.62, 0.62, 0.6)
+const STARS := 3  # stars per puff when violence is NONE
+
+var violence: int = Violence.FULL
+var _tint := BLOOD
+var _tint_dark := BLOOD_DARK
+var _splat_lifetime := SPLAT_LIFETIME
 
 var _drop_pos := PackedVector2Array()
 var _drop_vel := PackedVector2Array()
@@ -28,7 +38,7 @@ var _splat_size := PackedFloat32Array()
 var _splat_age := PackedFloat32Array()
 var _splat_next := 0
 var _splat_count := 0
-var _since_splat := INF  # seconds since the newest splat; all splats are gone after SPLAT_LIFETIME
+var _since_splat := INF  # seconds since the newest splat; all splats are gone after _splat_lifetime
 
 
 func _ready() -> void:
@@ -47,12 +57,40 @@ func _ready() -> void:
 	_splat_age.resize(MAX_SPLATS)
 
 
+## Switches the violence level (Settings.Violence) and wipes what is on screen, so no blood is
+## left behind after choosing a gentler level.
+func set_violence(level: int) -> void:
+	violence = level
+	match level:
+		Violence.FULL:
+			_tint = BLOOD
+			_tint_dark = BLOOD_DARK
+			_splat_lifetime = SPLAT_LIFETIME
+		Violence.LOW:
+			_tint = Ink.INK
+			_tint_dark = Ink.INK.lightened(0.25)
+			_splat_lifetime = LOW_SPLAT_LIFETIME
+		_:
+			_tint = DUST
+			_tint_dark = DUST.lightened(0.2)
+			_splat_lifetime = 0.0
+	clear()
+
+
 ## A spray of blood (and optionally bones) bursting out of `at`. The amount is scaled by the seed's
-## gore multiplier (seed[14]) and extra bones (seed[15]).
+## gore multiplier (seed[14]) and extra bones (seed[15]). Lower violence levels spray less and swap
+## the bones for stars or nothing.
 func burst(at: Vector2, drops: int, force: float, bones: int) -> void:
 	drops = int(drops * Art.gore_amount)
 	if bones > 0:
 		bones += Art.extra_bones
+	if violence == Violence.LOW:
+		drops /= 2
+		bones = 0
+	elif violence == Violence.NONE:
+		drops /= 3
+		force *= 0.4
+		bones = STARS
 	for i in drops:
 		if _drop_count >= MAX_DROPS:
 			break
@@ -71,7 +109,8 @@ func burst(at: Vector2, drops: int, force: float, bones: int) -> void:
 		_bone_spin[_bone_count] = randf_range(-14.0, 14.0)
 		_bone_age[_bone_count] = 0.0
 		_bone_count += 1
-	splat(at, randf_range(10.0, 15.0))
+	if violence != Violence.NONE:
+		splat(at, randf_range(10.0, 15.0))
 
 
 ## A blood stain on the floor. Oldest stains are reused once the pool is full.
@@ -90,7 +129,7 @@ func active_count() -> int:
 
 ## True while anything is still visible, so finished gore stops costing redraws.
 func is_active() -> bool:
-	return _drop_count > 0 or _bone_count > 0 or _since_splat < SPLAT_LIFETIME
+	return _drop_count > 0 or _bone_count > 0 or _since_splat < _splat_lifetime
 
 
 func clear() -> void:
@@ -108,7 +147,8 @@ func _process(delta: float) -> void:
 	while i < _drop_count:
 		_drop_life[i] -= delta
 		if _drop_life[i] <= 0.0:
-			splat(_drop_pos[i], _drop_size[i] * 1.5)
+			if violence != Violence.NONE:
+				splat(_drop_pos[i], _drop_size[i] * 1.5)
 			_drop_count -= 1
 			_drop_pos[i] = _drop_pos[_drop_count]
 			_drop_vel[i] = _drop_vel[_drop_count]
@@ -144,12 +184,12 @@ func _draw() -> void:
 	if not is_active():
 		return
 	for k in _splat_count:
-		var fade := 1.0 - _splat_age[k] / SPLAT_LIFETIME
+		var fade := 1.0 - _splat_age[k] / _splat_lifetime
 		if fade <= 0.0:
 			continue
 		var at := _splat_pos[k]
 		var size := _splat_size[k]
-		var color := Color(BLOOD_DARK if k % 3 == 0 else BLOOD, fade)
+		var color := Color(_tint_dark if k % 3 == 0 else _tint, fade)
 		Ink.disc(self, at, size * 0.6, color)
 		for j in 4:  # irregular blob: a few lobes around the centre
 			var dir := Vector2.from_angle(Ink.rand(k, j) * TAU)
@@ -158,7 +198,18 @@ func _draw() -> void:
 	for k in _drop_count:
 		var tail := _drop_vel[k].limit_length(_drop_size[k] * 40.0) * 0.012  # keep the dots touching
 		for j in 3:
-			Ink.disc(self, _drop_pos[k] - tail * j, _drop_size[k] * (0.5 - 0.1 * j), BLOOD)
+			Ink.disc(self, _drop_pos[k] - tail * j, _drop_size[k] * (0.5 - 0.1 * j), _tint)
 	for k in _bone_count:
 		var alpha := clampf((BONE_LIFETIME - _bone_age[k]) / 0.5, 0.0, 1.0)
-		Ink.bone(self, _bone_pos[k], _bone_rot[k], 10.0, alpha)
+		if violence == Violence.NONE:
+			_star(_bone_pos[k], _bone_rot[k], alpha)
+		else:
+			Ink.bone(self, _bone_pos[k], _bone_rot[k], 10.0, alpha)
+
+
+## A cartoon "seeing stars" sparkle: two crossed ink diamonds, spinning.
+func _star(at: Vector2, angle: float, alpha: float) -> void:
+	draw_set_transform(at, angle, Vector2.ONE)
+	Ink.diamond(self, Vector2.ZERO, Vector2(2.0, 8.0), Color(Ink.INK, alpha))
+	Ink.diamond(self, Vector2.ZERO, Vector2(8.0, 2.0), Color(Ink.INK, alpha))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

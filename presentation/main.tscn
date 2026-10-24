@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1"]
 [ext_resource type="Script" path="res://presentation/floor.gd" id="2"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://presentation/controls.gd" id="9"]
 [ext_resource type="Script" path="res://presentation/dpad.gd" id="10"]
 [ext_resource type="Script" path="res://presentation/pause_button.gd" id="11"]
+[ext_resource type="Script" path="res://presentation/menu.gd" id="12"]
 
 [sub_resource type="ShaderMaterial" id="floor_mat"]
 shader = ExtResource("3")
@@ -50,34 +51,6 @@ mouse_filter = 2
 script = ExtResource("6")
 
 [node name="Label" type="Label" parent="HUD/Status"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-label_settings = SubResource("text")
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Banner" type="Control" parent="HUD"]
-visible = false
-layout_mode = 3
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -280.0
-offset_top = -130.0
-offset_right = 280.0
-offset_bottom = 130.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("6")
-
-[node name="Label" type="Label" parent="HUD/Banner"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -131,6 +104,17 @@ offset_bottom = -24.0
 grow_horizontal = 0
 grow_vertical = 0
 script = ExtResource("10")
+
+[node name="Menu" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("12")
 
 [node name="Controls" type="Node" parent="."]
 script = ExtResource("9")

@@ -2,14 +2,33 @@ extends GutTest
 
 const View := preload("res://presentation/view_config.gd")
 
+const SETTINGS_PATH := "user://test_main_settings.cfg"
+
 var main: Node2D
 var world: Node2D
+var _saved_settings: Array
+
+
+func before_all() -> void:
+	# Menu tests change settings; keep them away from the player's real settings file.
+	_saved_settings = [Settings.path, Settings.violence, Settings.show_arrows]
+	Settings.path = SETTINGS_PATH
+
+
+func after_all() -> void:
+	Settings.path = _saved_settings[0]
+	Settings.violence = _saved_settings[1]
+	Settings.show_arrows = _saved_settings[2]
+	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
 func before_each() -> void:
+	Settings.violence = Settings.Violence.FULL
+	Settings.show_arrows = true
 	main = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
 	world = main.get_node("World")
+	main.start_run()  # most tests are about a run; the title screen has its own tests
 
 
 func test_scene_starts_a_game() -> void:
@@ -34,14 +53,130 @@ func test_pause_toggles_and_blocks_turns() -> void:
 	assert_false(main.paused)
 
 
-func test_restart_only_after_game_over() -> void:
+func test_game_over_card_restarts() -> void:
 	main.game.score = 50
-	main._handle_key(KEY_ENTER)
-	assert_eq(main.game.score, 50)
 	main.game.game_over = true
-	main._handle_key(KEY_ENTER)
+	main._process(0.0)
+	assert_eq(main.screen, main.Screen.OVER)
+	assert_string_contains(main._menu.heading(), "THE END")
+	assert_string_contains(main._menu.heading(), "50")
+	main._menu.press("Restart")
+	assert_eq(main.screen, main.Screen.PLAYING)
 	assert_eq(main.game.score, 0)
 	assert_false(main.game.game_over)
+
+
+func test_game_over_card_leads_to_title() -> void:
+	main.game.game_over = true
+	main._process(0.0)
+	main._menu.press("Menu")
+	assert_eq(main.screen, main.Screen.TITLE)
+
+
+func test_starts_on_the_title_card_with_a_frozen_game() -> void:
+	var fresh: Node2D = load("res://presentation/main.tscn").instantiate()
+	add_child_autofree(fresh)
+	assert_eq(fresh.screen, fresh.Screen.TITLE)
+	assert_true(fresh._menu.visible)
+	assert_false(fresh.get_node("HUD/Pause").visible)
+	var head: Vector2i = fresh.game.body[0]
+	fresh._process(fresh.game.tick_interval() * 3.0)
+	assert_eq(fresh.game.body[0], head)
+	fresh._menu.press("Play")
+	assert_eq(fresh.screen, fresh.Screen.PLAYING)
+	assert_false(fresh._menu.visible)
+
+
+func test_title_has_play_options_and_github() -> void:
+	main.show_title()
+	var texts: Array[String] = []
+	for button in main._menu.buttons():
+		texts.append(button.text)
+	assert_eq(texts, ["Play", "Options", "GitHub"] as Array[String])
+	assert_true(main._menu.buttons()[0].has_focus())  # keyboard players can press Enter right away
+
+
+func test_pause_menu_items_and_quit_to_menu() -> void:
+	main._handle_key(KEY_P)
+	var texts: Array[String] = []
+	for button in main._menu.buttons():
+		texts.append(button.text)
+	assert_eq(texts, ["Resume", "Restart", "Options", "Quit to menu", "GitHub"] as Array[String])
+	main._menu.press("Quit to menu")
+	assert_eq(main.screen, main.Screen.TITLE)
+	assert_false(main.get_node("HUD/Pause").visible)
+
+
+func test_pause_menu_resume_and_restart() -> void:
+	main.game.score = 30
+	main._handle_key(KEY_P)
+	main._menu.press("Resume")
+	assert_false(main.paused)
+	assert_eq(main.game.score, 30)
+	main._handle_key(KEY_P)
+	main._menu.press("Restart")
+	assert_false(main.paused)
+	assert_eq(main.game.score, 0)
+
+
+func test_options_cycle_violence_and_save_it() -> void:
+	main._handle_key(KEY_P)
+	main._menu.press("Options")
+	assert_eq(main.screen, main.Screen.OPTIONS)
+	main._menu.press("Violence: Full")
+	assert_eq(Settings.violence, Settings.Violence.LOW)
+	assert_eq(main.get_node("Gore").violence, Settings.Violence.LOW)
+	main._menu.press("Violence: Low")
+	main._menu.press("Violence: None")
+	assert_eq(Settings.violence, Settings.Violence.FULL)
+	assert_true(main._menu.buttons()[0].has_focus())  # rebuilt page keeps the keyboard's place
+	var saved := ConfigFile.new()
+	assert_eq(saved.load(SETTINGS_PATH), OK)
+
+
+func test_options_hide_the_arrows() -> void:
+	var dpad: Control = main.get_node("HUD/DPad")
+	main._on_touch_seen()
+	assert_true(dpad.visible)
+	main._handle_key(KEY_P)
+	assert_false(dpad.visible)  # never over a menu
+	main._menu.press("Options")
+	main._menu.press("Arrows on touch: Shown")
+	assert_false(Settings.show_arrows)
+	assert_true(main._menu.buttons()[1].has_focus())
+	main._menu.press("Back")
+	main._menu.press("Resume")
+	assert_false(dpad.visible)
+
+
+func test_options_back_returns_where_they_came_from() -> void:
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("Back")
+	assert_eq(main.screen, main.Screen.TITLE)
+	main.start_run()
+	main._handle_key(KEY_P)
+	main._menu.press("Options")
+	main._handle_key(KEY_ESCAPE)  # Esc goes back too
+	assert_eq(main.screen, main.Screen.PAUSED)
+
+
+func test_fullscreen_option_shows_the_window_state() -> void:
+	main.show_title()
+	main._menu.press("Options")
+	var label := "Fullscreen: %s" % ("On" if main.is_fullscreen() else "Off")
+	assert_eq(main._menu.buttons()[2].text, label)
+	main._menu.press(label)  # headless has no real window; this must just not fail
+	assert_eq(main.screen, main.Screen.OPTIONS)
+	assert_true(main._menu.buttons()[2].has_focus())
+
+
+func test_turns_are_ignored_outside_a_run() -> void:
+	main.show_title()
+	main._handle_key(KEY_UP)
+	main.start_run()
+	main.game.tick()
+	assert_eq(main.game.direction, Vector2i.RIGHT)
 
 
 func test_process_advances_the_game() -> void:
@@ -78,19 +213,12 @@ func test_key_release_and_echo_are_ignored() -> void:
 	assert_eq(main.game.direction, Vector2i.RIGHT)
 
 
-func test_banner_shows_pause_and_game_over() -> void:
+func test_menu_card_shows_pause_and_hides_in_play() -> void:
 	main._handle_key(KEY_P)
-	main._process(0.0)
-	assert_string_contains(main._banner.text, "INTERMISSION")
-	assert_true(main._banner_card.visible)
+	assert_string_contains(main._menu.heading(), "INTERMISSION")
+	assert_true(main._menu.visible)
 	main._handle_key(KEY_P)
-	main.game.game_over = true
-	main._process(0.0)
-	assert_string_contains(main._banner.text, "THE END")
-	main._handle_key(KEY_KP_ENTER)
-	main._process(0.0)
-	assert_eq(main._banner.text, "")
-	assert_false(main._banner_card.visible)
+	assert_false(main._menu.visible)
 
 
 func test_hud_shows_score_and_lives() -> void:
@@ -245,18 +373,19 @@ func test_gore_freezes_while_paused_and_clears_on_restart() -> void:
 	main._handle_key(KEY_P)
 	assert_true(gore.is_processing())
 	main.game.game_over = true
-	main._handle_key(KEY_ENTER)
+	main._process(0.0)
+	main._menu.press("Restart")
 	assert_eq(gore.active_count(), 0)
 
 
 func test_hud_uses_bundled_serif_font() -> void:
 	assert_eq(main._status.get_theme_font("font"), main.SERIF)
-	assert_eq(main._banner.get_theme_font("font"), main.SERIF)
+	assert_eq(main._menu.buttons()[0].get_theme_font("font"), main.SERIF)
 
 
 func test_every_scene_script_loads() -> void:
 	# A script with a parse error would silently drop off its node; catch that here.
-	for path in ["Floor", "Gore", "World", "HUD/Status", "HUD/Banner", "PerfOverlay", "Controls", "HUD/DPad",
+	for path in ["Floor", "Gore", "World", "HUD/Status", "HUD/Menu", "PerfOverlay", "Controls", "HUD/DPad",
 			"HUD/Pause"]:
 		assert_not_null(main.get_node(path).get_script(), path)
 
@@ -322,22 +451,6 @@ func test_short_drag_is_not_a_swipe() -> void:
 	assert_eq(main.game.direction, Vector2i.RIGHT)
 
 
-func test_tap_resumes_and_restarts() -> void:
-	var controls = main.get_node("Controls")
-	main._handle_key(KEY_P)
-	main._process(0.0)
-	controls._unhandled_input(_touch(Vector2(500, 300), true))
-	controls._unhandled_input(_touch(Vector2(500, 300), false))
-	assert_false(main.paused)
-	main.game.score = 40
-	main.game.game_over = true
-	main._process(0.0)
-	controls._unhandled_input(_touch(Vector2(500, 300), true))
-	controls._unhandled_input(_touch(Vector2(500, 300), false))
-	assert_false(main.game.game_over)
-	assert_eq(main.game.score, 0)
-
-
 func test_tap_during_play_does_nothing() -> void:
 	var controls = main.get_node("Controls")
 	main.game.score = 40
@@ -349,7 +462,9 @@ func test_tap_during_play_does_nothing() -> void:
 
 func test_first_touch_shows_the_dpad() -> void:
 	var dpad = main.get_node("HUD/DPad")
-	dpad.visible = false
+	main._touch_seen = false
+	main._update_dpad()
+	assert_false(dpad.visible)
 	main.get_node("Controls")._unhandled_input(_touch(Vector2(10, 10), true))
 	assert_true(dpad.visible)
 
@@ -402,16 +517,6 @@ func _arm(dpad: Control, dir: Vector2i) -> Vector2:
 	return dpad.get_global_rect().get_center() + Vector2(dir) * dpad.size.x / 3.0
 
 
-func test_finger_down_when_snake_dies_does_not_restart() -> void:
-	var controls = main.get_node("Controls")
-	main._process(0.0)  # playing, so taps are not accepted
-	controls._unhandled_input(_touch(Vector2(500, 300), true))
-	main.game.game_over = true
-	main._process(0.0)
-	controls._unhandled_input(_touch(Vector2(500, 300), false))
-	assert_true(main.game.game_over)
-
-
 func test_new_finger_takes_over_the_swipe() -> void:
 	var controls = main.get_node("Controls")
 	controls._unhandled_input(_finger(Vector2(100, 500), true, 0))  # resting thumb
@@ -431,21 +536,16 @@ func _isolated_main() -> Array:
 	add_child_autofree(viewport)
 	var isolated: Node2D = load("res://presentation/main.tscn").instantiate()
 	viewport.add_child(isolated)
-	isolated.get_node("HUD/DPad").visible = true
+	isolated.start_run()
+	isolated._on_touch_seen()
 	return [viewport, isolated]
 
 
-func test_dpad_tap_through_viewport_turns_and_is_not_a_board_tap() -> void:
+func test_dpad_tap_through_viewport_turns() -> void:
 	var setup := _isolated_main()
 	var viewport: SubViewport = setup[0]
 	var game_main: Node2D = setup[1]
-	game_main._handle_key(KEY_P)
-	game_main._process(0.0)
 	var at := _arm(game_main.get_node("HUD/DPad"), Vector2i.UP)
-	viewport.push_input(_finger(at, true), true)
-	viewport.push_input(_finger(at, false), true)
-	assert_true(game_main.paused)  # a board tap would have resumed
-	game_main._handle_key(KEY_P)
 	viewport.push_input(_finger(at, true), true)
 	viewport.push_input(_finger(at, false), true)
 	game_main.game.tick()
@@ -488,14 +588,26 @@ func test_emulated_mouse_click_is_ignored_by_dpad() -> void:
 	assert_eq(main.game.direction, Vector2i.RIGHT)
 
 
-func test_board_tap_through_viewport_still_resumes_with_dpad_shown() -> void:
+func _click(pos: Vector2, pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = pos
+	event.global_position = pos
+	event.pressed = pressed
+	return event
+
+
+func test_menu_button_click_through_viewport() -> void:
+	# A tap on a phone reaches buttons as this click (Godot turns the first finger into the mouse).
 	var setup := _isolated_main()
 	var viewport: SubViewport = setup[0]
 	var game_main: Node2D = setup[1]
 	game_main._handle_key(KEY_P)
-	game_main._process(0.0)
-	viewport.push_input(_finger(Vector2(300, 300), true), true)
-	viewport.push_input(_finger(Vector2(300, 300), false), true)
+	await wait_process_frames(1)  # let the card lay out
+	var resume: Button = game_main._menu.buttons()[0]
+	var at := resume.get_global_rect().get_center()
+	viewport.push_input(_click(at, true), true)
+	viewport.push_input(_click(at, false), true)
 	assert_false(game_main.paused)
 
 
@@ -518,3 +630,103 @@ func test_build_label_shows_which_build_this_is() -> void:
 	var label: Label = main.get_node("HUD/Build")
 	assert_eq(label.text, preload("res://presentation/build_info.gd").LABEL)
 	assert_ne(label.text, "")
+
+
+func test_low_violence_is_ink_without_bones() -> void:
+	var gore = main.get_node("Gore")
+	gore.set_violence(Settings.Violence.LOW)
+	gore.burst(Vector2(100, 100), 20, 200.0, 3)
+	assert_eq(gore._bone_count, 0)
+	assert_gt(gore._splat_count, 0)
+	assert_eq(gore._tint, Ink.INK)  # no red
+	gore._process(gore.LOW_SPLAT_LIFETIME + 1.0)
+	gore._process(gore.LOW_SPLAT_LIFETIME + 1.0)
+	assert_false(gore.is_active())  # ink fades fast
+
+
+func test_no_violence_is_dust_and_stars_without_stains() -> void:
+	var gore = main.get_node("Gore")
+	gore.set_violence(Settings.Violence.NONE)
+	gore.burst(Vector2(100, 100), 20, 200.0, 0)
+	assert_eq(gore._bone_count, gore.STARS)
+	assert_eq(gore._splat_count, 0)
+	for i in 10:
+		gore._process(0.1)
+	assert_eq(gore._splat_count, 0)  # landing dust leaves no stain
+	gore.queue_redraw()
+	await wait_process_frames(2)  # stars draw
+	assert_true(is_instance_valid(gore))
+
+
+func test_choosing_gentler_violence_wipes_the_blood() -> void:
+	var gore = main.get_node("Gore")
+	gore.burst(Vector2(100, 100), 20, 200.0, 2)
+	assert_gt(gore.active_count(), 0)
+	Settings.set_violence(Settings.Violence.LOW)
+	assert_eq(gore.violence, Settings.Violence.LOW)
+	assert_eq(gore.active_count(), 0)
+
+
+func test_death_splatter_keeps_flying_behind_the_end_card() -> void:
+	main.game.lives = 1
+	main.game.set_body([Vector2i(99, 50), Vector2i(98, 50), Vector2i(97, 50)])
+	main._process(main.game.tick_interval() + 0.001)
+	assert_eq(main.screen, main.Screen.OVER)
+	assert_true(main.get_node("Gore").is_processing())
+	main._handle_key(KEY_P)  # no pause menu over the end card
+	assert_eq(main.screen, main.Screen.OVER)
+
+
+func test_any_finger_presses_a_menu_button() -> void:
+	main._handle_key(KEY_P)
+	var resume: Button = main._menu.buttons()[0]
+	resume.size = Vector2(200, 40)
+	var touch := _finger(Vector2(20, 20), true, 1)  # second finger; the first rests elsewhere
+	resume._gui_input(touch)
+	assert_true(main.paused)  # pressing down alone does nothing
+	resume._gui_input(_finger(Vector2(20, 20), false, 1))
+	assert_false(main.paused)
+
+
+func test_finger_slid_off_a_menu_button_does_not_press_it() -> void:
+	main._handle_key(KEY_P)
+	var resume: Button = main._menu.buttons()[0]
+	resume.size = Vector2(200, 40)
+	resume._gui_input(_finger(Vector2(20, 20), true))
+	resume._gui_input(_finger(Vector2(20, 300), false))
+	assert_true(main.paused)
+
+
+func test_emulated_click_on_a_menu_button_is_ignored() -> void:
+	main._handle_key(KEY_P)
+	var resume: Button = main._menu.buttons()[0]
+	resume.size = Vector2(200, 40)
+	var click := _click(Vector2(20, 20), false)
+	click.device = InputEvent.DEVICE_ID_EMULATION
+	resume._gui_input(click)
+	assert_true(main.paused)  # the touch itself already counted
+
+
+func test_options_label_follows_window_changes() -> void:
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.buttons()[1].grab_focus()
+	main._on_resized()
+	assert_true(main._menu.buttons()[1].has_focus())
+	assert_true(main.can_fullscreen())  # not an iPhone browser
+
+
+func test_second_finger_presses_a_menu_button_through_viewport() -> void:
+	var setup := _isolated_main()
+	var viewport: SubViewport = setup[0]
+	var game_main: Node2D = setup[1]
+	game_main._handle_key(KEY_P)
+	await wait_process_frames(1)  # let the card lay out
+	var resume: Button = game_main._menu.buttons()[0]
+	var at := resume.get_global_rect().get_center()
+	viewport.push_input(_finger(Vector2(100, 600), true, 0), true)  # thumb resting on the board
+	viewport.push_input(_finger(at, true, 1), true)
+	assert_true(resume.has_theme_stylebox_override("normal"))  # shows pressed while held
+	viewport.push_input(_finger(at, false, 1), true)
+	assert_false(resume.has_theme_stylebox_override("normal"))
+	assert_false(game_main.paused)

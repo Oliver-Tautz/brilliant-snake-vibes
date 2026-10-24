@@ -1,7 +1,7 @@
 ## Renders the main scene in a staged state and saves a screenshot.
 ## Usage: godot --path . -s tools/capture.gd -- <out.png> [scenario]
-## Scenarios: start, paused, play (runs live), corners (long snake with turns, mid-tick), eat (gore),
-## edge (snake near the top-left wall), touch (corners with the touch D-pad shown).
+## Scenarios: title, options, start, paused (pause menu), play (runs live), corners (long snake with
+## turns, mid-tick), eat (gore), edge (snake near the top-left wall), touch (corners with the D-pad).
 ## Optional third arg: a WallStyle index to override the seed.
 extends SceneTree
 
@@ -36,8 +36,8 @@ func _process(_delta: float) -> bool:
 	_frame += 1
 	if _frame == 2:
 		_stage()
-	if _frame > 2 and _scenario != "paused":
-		_main.get_node("HUD/Banner").visible = false
+	if _frame > 2 and not _scenario in ["title", "options", "paused"]:
+		_main.get_node("HUD/Menu").visible = false
 	if _frame < (PLAY_FRAMES if _scenario == "play" else FRAMES):
 		return false
 	_viewport.get_texture().get_image().save_png(_out)
@@ -46,10 +46,16 @@ func _process(_delta: float) -> bool:
 
 
 func _stage() -> void:
+	if _scenario == "title":
+		return
+	if _scenario == "options":
+		_main._show_options(_main.Screen.TITLE)
+		return
+	_main.start_run()
 	if _scenario == "play":  # unstaged: the game simply runs until the capture frame
 		_main.game.request_turn(Vector2i.UP)
 		return
-	_main.paused = true
+	_main._show_pause()  # frozen; the card is hidden again unless this is "paused"
 	var game: SnakeGame = _main.game
 	if _scenario == "start" or _scenario == "paused":
 		return
@@ -74,6 +80,7 @@ func _stage() -> void:
 	_main._accumulator = game.tick_interval() * 0.5
 	if _scenario == "touch":
 		_main.get_node("HUD/DPad").visible = true
+		_main.get_node("HUD/Pause").visible = true
 	if _scenario == "eat":
 		_main.play_eat_effect(c + Vector2i(1, 0))
 		_main.play_eat_effect(c + Vector2i(-3, 2))
