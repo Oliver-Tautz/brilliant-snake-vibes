@@ -89,7 +89,7 @@ func set_view_fit(on: bool) -> void:
 	changed.emit()
 
 
-## Writes both values to path.
+## Writes all settings and the highscores to path.
 func save() -> void:
 	var file := ConfigFile.new()
 	file.set_value("game", "gore", gore)

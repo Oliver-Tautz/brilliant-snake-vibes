@@ -11,7 +11,8 @@ var _saved_settings: Array
 
 func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
-	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true)]
+	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true),
+			Settings.start_level, Settings.view_fit]
 	Settings.path = SETTINGS_PATH
 
 
@@ -20,6 +21,8 @@ func after_all() -> void:
 	Settings.gore = _saved_settings[1]
 	Settings.show_arrows = _saved_settings[2]
 	Settings.highscores.assign(_saved_settings[3])
+	Settings.start_level = _saved_settings[4]
+	Settings.view_fit = _saved_settings[5]
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
@@ -27,6 +30,8 @@ func before_each() -> void:
 	Settings.gore = true
 	Settings.show_arrows = true
 	Settings.highscores.clear()
+	Settings.start_level = 1
+	Settings.view_fit = false
 	main = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
 	world = main.get_node("World")
@@ -250,10 +255,53 @@ func test_fullscreen_option_shows_the_window_state() -> void:
 	main.show_title()
 	main._menu.press("Options")
 	var label := "Fullscreen: %s" % ("On" if main.is_fullscreen() else "Off")
-	assert_eq(main._menu.buttons()[2].text, label)
+	assert_eq(main._menu.buttons()[4].text, label)
 	main._menu.press(label)  # headless has no real window; this must just not fail
 	assert_eq(main.screen, main.Screen.OPTIONS)
+	assert_true(main._menu.buttons()[4].has_focus())
+
+
+func test_start_level_option_sets_where_a_run_begins() -> void:
+	Settings.start_level = 1
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("Start level: 1")
+	main._menu.press("Start level: 2")
+	assert_eq(Settings.start_level, 3)
 	assert_true(main._menu.buttons()[2].has_focus())
+	main._menu.press("Back")
+	main._menu.press("Play")
+	assert_eq(main.game.level, 3)
+	assert_eq(main.game.width, SnakeGame.arena_size(3).x)
+	Settings.start_level = 10
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("Start level: 10")
+	assert_eq(Settings.start_level, 1)  # round again
+
+
+func test_whole_arena_view_fits_the_arena() -> void:
+	main.start_run()
+	main._process(0.0)
+	assert_eq(main.get_node("Camera2D").zoom, Vector2(View.ZOOM, View.ZOOM))
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("View: Follow")
+	assert_true(Settings.view_fit)
+	main._process(0.0)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var arena := Vector2(main.game.width, main.game.height) * View.CELL
+	assert_lt(camera.zoom.x, View.ZOOM)
+	assert_gte(camera.zoom.x, View.MIN_ZOOM)
+	assert_eq(camera.position, arena / 2.0)  # level 1 fits the base screen, so it is centred
+
+
+func test_whole_arena_view_follows_on_a_huge_board() -> void:
+	Settings.view_fit = true
+	main._process(0.0)  # the 100 x 100 free-play board does not fit at the minimum zoom
+	var camera: Camera2D = main.get_node("Camera2D")
+	assert_almost_eq(camera.zoom.x, View.MIN_ZOOM, 0.0001)
+	assert_ne(camera.position, Vector2(50, 50) * View.CELL)
 
 
 func test_turns_are_ignored_outside_a_run() -> void:
@@ -797,3 +845,13 @@ func test_second_finger_presses_a_menu_button_through_viewport() -> void:
 	viewport.push_input(_finger(at, false, 1), true)
 	assert_false(resume.has_theme_stylebox_override("normal"))
 	assert_false(game_main.paused)
+
+
+func test_whole_arena_view_centres_one_axis_and_follows_the_other() -> void:
+	Settings.view_fit = true
+	main.set_game(SnakeGame.new(100, 10, 1))  # wide and short: fits in height, not in width
+	main._process(0.0)
+	var camera: Camera2D = main.get_node("Camera2D")
+	assert_eq(camera.position.y, 10.0 * View.CELL / 2.0)
+	var half_width := main.get_viewport_rect().size.x / camera.zoom.x / 2.0
+	assert_eq(camera.position.x, maxf(half_width, View.center(main.game.body[0]).x))

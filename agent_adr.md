@@ -362,3 +362,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: visual glitches and hot-path allocations.
 - Source: reviewer findings
 - Revisit if: the playtest shows lurking enemies are unfair.
+
+## 2026-10-24 — Start level and whole-arena view options
+- Decision: Options gains "Start level: N" (1 to 10, wraps around, saved, used by the next run) and "View: Follow / Whole arena" (saved). The whole-arena view zooms the camera so the arena fits the screen, but never below 0.6 (cells stay at least 14 px at the base resolution). On an arena that still does not fit, the camera follows the head along that axis. Option order: Gore, Arrows, Start level, View, Fullscreen, Back.
+- Decided by: claude (built from spec §2, §4, §5 while the user was away); worker (settings storage, from my brief)
+- Why: the spec lists both options; both are cheap.
+- Source: spec §2, §4, §5
+- Revisit if: the minimum on-screen snake size (spec §4 TBD) is decided.

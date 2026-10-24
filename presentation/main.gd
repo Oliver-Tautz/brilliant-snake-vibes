@@ -44,7 +44,6 @@ func _ready() -> void:
 	for label in [_status, $HUD/Build]:
 		label.add_theme_font_override("font", SERIF)
 	$HUD/Build.text = BuildInfo.LABEL
-	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 	var film := ($Film/Screen as ColorRect).material as ShaderMaterial
 	film.set_shader_parameter("grain", Art.film_grain)  # seed[16]
 	film.set_shader_parameter("flicker", Art.film_flicker)  # seed[17]
@@ -87,7 +86,7 @@ func _process(delta: float) -> void:
 		_burst_pending_eat()
 	_world.eat_pulse = maxf(0.0, _world.eat_pulse - delta)
 	_shake = maxf(0.0, _shake - delta)
-	_camera.position = _world.snake_path()[0]
+	_aim_camera()
 	_camera.offset = Vector2(randf() - 0.5, randf() - 0.5) * 18.0 * (_shake / View.SHAKE_TIME)
 	_world.view_rect = _visible_rect()
 	_world.queue_redraw()
@@ -235,6 +234,8 @@ func _show_options(from: Screen, focus := 0) -> void:
 	var items := [
 		["Gore: %s" % ("On" if Settings.gore else "Off"), _toggle_gore],
 		["Arrows on touch: %s" % ("Shown" if Settings.show_arrows else "Hidden"), _toggle_arrows],
+		["Start level: %d" % Settings.start_level, _next_start_level],
+		["View: %s" % ("Whole arena" if Settings.view_fit else "Follow"), _toggle_view],
 	]
 	if can_fullscreen():
 		items.append(["Fullscreen: %s" % ("On" if is_fullscreen() else "Off"), _toggle_fullscreen])
@@ -252,11 +253,22 @@ func _toggle_arrows() -> void:
 	_show_options(_options_from, 1)
 
 
+## The level the next run starts at, 1 to 10 and round again (spec §5).
+func _next_start_level() -> void:
+	Settings.set_start_level(Settings.start_level % Settings.MAX_START_LEVEL + 1)
+	_show_options(_options_from, 2)
+
+
+func _toggle_view() -> void:
+	Settings.set_view_fit(not Settings.view_fit)
+	_show_options(_options_from, 3)
+
+
 ## Not saved: browsers only allow fullscreen right after a click or tap, so it cannot be restored on load.
 func _toggle_fullscreen() -> void:
 	DisplayServer.window_set_mode(
 			DisplayServer.WINDOW_MODE_WINDOWED if is_fullscreen() else DisplayServer.WINDOW_MODE_FULLSCREEN)
-	_show_options(_options_from, 2)
+	_show_options(_options_from, 4)
 
 
 ## iPhone browsers have no fullscreen for a game canvas, so the option is left out there.
@@ -312,10 +324,10 @@ func _apply_settings() -> void:
 	_update_dpad()
 
 
-## A new run starts at level 1.
+## A new run starts at the chosen start level (spec §5).
 func _new_game() -> void:
 	var fresh := SnakeGame.new(Cfg.ARENA.x, Cfg.ARENA.y, Time.get_ticks_usec())
-	fresh.start_level(1)
+	fresh.start_level(Settings.start_level)
 	set_game(fresh)
 
 
@@ -334,7 +346,7 @@ func _on_level_started() -> void:
 	_world.dying_prey = _pending_eat
 	_accumulator = 0.0
 	_world.t = 1.0
-	_camera.position = View.center(game.body[0])
+	_aim_camera()
 	_update_hud()
 
 
@@ -353,6 +365,25 @@ func _update_hud() -> void:
 		text += "     LEVEL  %d     TIME  %d:%02d     FOES  %d" % [game.level, seconds / 60, seconds % 60,
 				game.enemies_alive()]
 	_status.text = text
+
+
+## Follow view: zoomed in on the head (seed[25]). Whole-arena view (spec §4): the arena fits the
+## screen, but never smaller than MIN_ZOOM; if it still does not fit, the camera follows the head.
+func _aim_camera() -> void:
+	var head: Vector2 = _world.snake_path()[0]
+	if not Settings.view_fit:
+		_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
+		_camera.position = head
+		return
+	var arena := Vector2(game.width, game.height) * View.CELL
+	var screen := get_viewport_rect().size
+	var zoom := maxf(View.MIN_ZOOM, minf(screen.x / (arena.x + View.CELL * 2.0), screen.y / (arena.y + View.CELL * 4.0)))
+	_camera.zoom = Vector2(zoom, zoom)
+	var half := screen / zoom / 2.0
+	var centre := arena / 2.0
+	# Centre the arena, or follow the head along any axis where it is bigger than the screen.
+	_camera.position = Vector2(centre.x if half.x * 2.0 >= arena.x else clampf(head.x, half.x, arena.x - half.x),
+			centre.y if half.y * 2.0 >= arena.y else clampf(head.y, half.y, arena.y - half.y))
 
 
 func _visible_rect() -> Rect2:

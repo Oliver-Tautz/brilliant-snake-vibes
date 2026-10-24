@@ -36,7 +36,7 @@ Added on request between steps, so the game can be tried on a tablet.
 - Gore On (default): blood, bones and splats. Off: dust puff and spinning stars, no stains.
   (The user rejected three levels: on/off only.)
 - Spec changes suggested to the user (not made): §11 a Gore on/off option; §2 options list.
-- Still open from spec §2/§4/§5/§8: start level, view (follow / fit), audio, highscores (step 4). Grid size: dropped, see step 5.
+- Still open from spec §2: audio. Start level and view (follow / whole arena) were added with step 5; highscores in step 4. Grid size: dropped, see step 5.
 
 ## 4. Menu follow-ups — done (waiting for the user's playtest)
 - Gore Off hides all gore; no dust or stars instead.
