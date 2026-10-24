@@ -58,3 +58,55 @@ func test_corrupt_saved_values_fall_back_to_defaults() -> void:
 
 func test_autoload_is_registered() -> void:
 	assert_not_null(get_tree().root.get_node_or_null("Settings"))
+
+
+func test_highscores_start_empty() -> void:
+	settings.load_settings()
+	assert_eq(settings.highscores.size(), 0)
+
+
+func test_add_score_keeps_top_ten_sorted_and_returns_rank() -> void:
+	for i in 10:
+		settings.add_score((i + 1) * 10, 1, "2026-01-01")
+	assert_eq(settings.highscores.size(), 10)
+	assert_eq(settings.highscores[0]["score"], 100)
+	assert_eq(settings.add_score(55, 3, "2026-01-02"), 5)  # between 60 and 50
+	assert_eq(settings.highscores.size(), 10)
+	assert_eq(settings.highscores[9]["score"], 20)  # 10 dropped off the end
+	assert_eq(settings.add_score(5, 1, "2026-01-02"), -1)  # too low to enter
+	assert_eq(settings.highscores[5], {"score": 55, "level": 3, "date": "2026-01-02"})
+
+
+func test_equal_score_ranks_below_the_older_entry() -> void:
+	settings.add_score(50, 1, "old")
+	assert_eq(settings.add_score(50, 2, "new"), 1)
+
+
+func test_zero_score_is_not_recorded() -> void:
+	assert_eq(settings.add_score(0, 1, "2026-01-01"), -1)
+	assert_eq(settings.highscores.size(), 0)
+
+
+func test_add_score_uses_todays_date_by_default() -> void:
+	settings.add_score(10, 1)
+	assert_eq(settings.highscores[0]["date"], Time.get_date_string_from_system())
+
+
+func test_highscores_are_saved_and_loaded_again() -> void:
+	settings.add_score(30, 2, "2026-01-01")
+	settings.add_score(70, 4, "2026-01-03")
+	var fresh := _reloaded()
+	assert_eq(fresh.highscores.size(), 2)
+	assert_eq(fresh.highscores[0], {"score": 70, "level": 4, "date": "2026-01-03"})
+
+
+func test_corrupt_highscores_are_dropped() -> void:
+	var file := ConfigFile.new()
+	file.set_value("scores", "table", [{"score": 40, "level": 2, "date": "x"}, "junk", {"score": "a"}, 7])
+	file.save(TEST_PATH)
+	var fresh := _reloaded()
+	assert_eq(fresh.highscores.size(), 1)
+	assert_eq(fresh.highscores[0]["score"], 40)
+	file.set_value("scores", "table", "not a list")
+	file.save(TEST_PATH)
+	assert_eq(_reloaded().highscores.size(), 0)
