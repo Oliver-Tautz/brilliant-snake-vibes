@@ -469,3 +469,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: user feedback after playing.
 - Source: user messages
 - Revisit if: the hints are too chatty or the late-level head-only zone is too hard.
+
+## 2026-10-24 — How to play in pages with live pictures
+- Decision: How to play is now four pages (steer and eat; bite from the side; watch out; clear the level), each with Prev / Next and a page number. The last page offers Done, or Play when it opens before a first run. Each page has a live picture instead of a screenshot file: `HowToDemo`, a SubViewport with the real floor and world view drawing a staged 18 x 8 board. On the first two pages it replays a few player moves in a loop (eating a line of chickens and growing; biting a cobra's glowing head from the side, which turns into chickens). The menu card gained a picture slot.
+- Decided by: user (screenshots, multiple pages, show the mechanics); claude (live pictures instead of image files, the four pages and their text)
+- Why: live pictures always match the current look, follow spec §17 (assets as code) and add nothing to the download.
+- Source: user message
+- Revisit if: the pictures are too small on phones.

@@ -6,7 +6,7 @@ Status: Draft v0.1. Items marked **TBD** need a decision.
 A browser and phone Snake game with a hand-drawn horror look. The player hunts chickens in an arena that shrinks each level and fights three enemy snakes for them. Delivered as a Godot web build to GitHub Pages via GitHub Actions.
 
 ## 2. Game Loop
-1. Main menu: Play, How to play, Gore (On / Off), Highscores, Options, link to GitHub. Until a level has been cleared once, the first Play of a session shows How to play first, and level 1 shows a hint line that moves on as the player does (eat, bite the glow from the side, kill all three).
+1. Main menu: Play, How to play (four pages, each with a live picture of a mechanic: steering and eating, biting from the side, what costs a life, clearing a level), Gore (On / Off), Highscores, Options, link to GitHub. Until a level has been cleared once, the first Play of a session shows How to play first, and level 1 shows a hint line that moves on as the player does (eat, bite the glow from the side, kill all three).
 2. Options: start level, view (follow / fit), on-screen arrows on touch (shown / hidden), fullscreen, audio.
 3. Run: the snake moves, hunts chickens, competes with three enemy snakes, collects power-ups.
 4. Life lost: snake shrinks, brief invulnerability, play continues.

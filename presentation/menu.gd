@@ -32,6 +32,7 @@ const LONG_PAGE := 6  # more buttons than this go into two columns
 var _heading := Label.new()
 var _body := Label.new()  # optional smaller text under the heading, e.g. the highscore table
 var _field := LineEdit.new()  # optional text entry, e.g. a name for the highscore table
+var _picture_slot := CenterContainer.new()  # optional picture, e.g. a How to play illustration
 var _list := VBoxContainer.new()
 var _grid := GridContainer.new()  # the buttons: one column, or two on long pages so they fit a phone
 
@@ -51,6 +52,7 @@ func _ready() -> void:
 	_field.visible = false
 	_field.text_submitted.connect(func(_text: String) -> void: press_first())  # Enter saves
 	_list.add_child(_heading)
+	_list.add_child(_picture_slot)
 	_list.add_child(_body)
 	_list.add_child(_field)
 	_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER  # a one-column page sits under the heading, not at the left
@@ -60,11 +62,17 @@ func _ready() -> void:
 	add_child(_list)
 
 
-## Shows a page: a heading, optional body text, an optional text field (pre-filled with `entry`) and
-## one button per [text, callable] item. `focus` is the button that gets keyboard focus, so a page
+## Shows a page: a heading, an optional picture, optional body text, an optional text field (pre-filled
+## with `entry`) and one button per [text, callable] item. `focus` is the button that gets keyboard focus, so a page
 ## rebuilt after a change keeps its place; with a field, the field gets it.
-func show_page(heading: String, items: Array, focus := 0, text := "", with_field := false, entry := "") -> void:
+func show_page(heading: String, items: Array, focus := 0, text := "", with_field := false, entry := "",
+		picture: Control = null) -> void:
 	_heading.text = heading
+	for old in _picture_slot.get_children():
+		_picture_slot.remove_child(old)  # the caller owns its pictures and may show them again
+	if picture != null:
+		_picture_slot.add_child(picture)
+	_picture_slot.visible = picture != null
 	_body.text = text
 	_body.visible = text != ""
 	_field.visible = with_field

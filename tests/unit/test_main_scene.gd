@@ -967,13 +967,39 @@ func test_long_menu_pages_use_two_columns() -> void:
 	assert_lte(main._menu.size.y, 600.0)  # fits a 648 px high screen
 
 
-func test_how_to_play_card() -> void:
+func test_how_to_play_has_pages_with_live_pictures() -> void:
 	main.show_title()
 	main._menu.press("How to play")
-	assert_string_contains(main._menu.heading(), "HOW TO PLAY")
+	assert_string_contains(main._menu.heading(), "STEER AND EAT")
+	assert_string_contains(main._menu.heading(), "1 / 4")
+	assert_not_null(main._demo)
+	assert_eq(main._demo.get_parent(), main._menu._picture_slot)
+	var length: int = main._demo.game.body.size()
+	for i in 40:  # the picture replays its moves: the snake eats and grows
+		main._demo._process(main._demo.STEP)
+		if main._demo.game.body.size() > length:
+			break
+	assert_gt(main._demo.game.body.size(), length)
+	main._menu.press("Next >")
+	assert_string_contains(main._menu.heading(), "BITE FROM THE SIDE")
 	assert_string_contains(main._menu.body(), "from the side")
-	main._menu.press("Back")
+	for i in 5:  # the picture shows the bite killing the enemy
+		main._demo._process(main._demo.STEP)
+	assert_false(main._demo.game.enemies[0].alive)
+	main._menu.press("Next >")
+	main._menu.press("Next >")
+	assert_string_contains(main._menu.heading(), "CLEAR THE LEVEL")
+	var texts: Array[String] = []
+	for button in main._menu.buttons():
+		texts.append(button.text)
+	assert_eq(texts, ["< Prev", "Done"] as Array[String])
+	main._menu.press("< Prev")
+	assert_string_contains(main._menu.heading(), "3 / 4")
+	assert_true(main._menu.buttons()[-1].has_focus())  # Next, ready to go on
+	main._menu.press("Next >")
+	main._menu.press("Done")
 	assert_eq(main.screen, main.Screen.TITLE)
+	assert_false(main._menu._picture_slot.visible)
 	assert_true(main._menu.buttons()[1].has_focus())
 
 
@@ -982,10 +1008,12 @@ func test_first_play_shows_how_to_play_then_hints_until_level_one_is_cleared() -
 	var fresh: Node2D = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(fresh)
 	fresh._menu.press("Play")
-	assert_string_contains(fresh._menu.heading(), "HOW TO PLAY")
-	assert_eq(fresh._menu.buttons()[0].text, "Play")
-	fresh._menu.press("Play")
+	assert_string_contains(fresh._menu.heading(), "STEER AND EAT")
+	for i in 3:
+		fresh._menu.press("Next >")
+	fresh._menu.press("Play")  # the last page leads straight into the run
 	assert_eq(fresh.screen, fresh.Screen.PLAYING)
+	assert_false(fresh._demo.is_processing())  # the picture rests while the game runs
 	fresh._process(0.0)
 	assert_true(fresh._hint.visible)
 	assert_eq(fresh._hint.text, fresh.HINTS[0])
@@ -1011,6 +1039,8 @@ func test_restart_does_not_show_how_to_play_again() -> void:
 	var fresh: Node2D = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(fresh)
 	fresh._menu.press("Play")
+	for i in 3:
+		fresh._menu.press("Next >")
 	fresh._menu.press("Play")
 	fresh._handle_key(KEY_P)
 	fresh._menu.press("Restart")

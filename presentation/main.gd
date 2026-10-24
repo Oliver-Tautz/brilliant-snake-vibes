@@ -210,7 +210,7 @@ func show_title(focus := 0) -> void:
 	_set_screen(Screen.TITLE)
 	_menu.show_page("~ BRILLIANT SNAKE VIBES ~", [
 		["Play", start_run],
-		["How to play", _show_how_to],
+		["How to play", _show_how_to.bind(0, Callable())],
 		["Gore: %s" % ("On" if Settings.gore else "Off"), _toggle_gore_on_title],
 		["Highscores", _show_highscores],
 		["Options", _show_options.bind(Screen.TITLE)],
@@ -228,25 +228,104 @@ func _show_highscores() -> void:
 	_menu.show_page("~ HIGHSCORES ~", [["Back", show_title.bind(3)]], 0, score_table())
 
 
-const HOW_TO := """Steer with the arrow keys or WASD, by swiping, or with the on-screen arrows.
-Eat chickens to grow. Orange ones make you grow three times as much.
-Kill all three enemy snakes before the clock runs out to clear the level.
-Bite an enemy's glowing head from the side to kill it.
-Face to face, the longer snake wins.
-Walls, bodies and running out of time cost a life.
-Each level the enemies get faster and the arena smaller.
-Esc or P pauses."""
-
-
+const Enemy := preload("res://logic/enemy_snake.gd")
+const HowToDemo := preload("res://presentation/how_to_demo.gd")
+## How to play, a page at a time: [heading, text, stage builder, replayed moves].
+const HOW_TO_PAGES := [
+	["~ STEER AND EAT ~", "Steer with the arrow keys or WASD, by swiping, or with the on-screen arrows.\n"
+			+ "Eat chickens to grow. Orange ones make you grow three times as much.", &"_stage_eat", 9],
+	["~ BITE FROM THE SIDE ~", "Kill an enemy snake by biting its red, glowing head from the side.\n"
+			+ "A dead snake turns into chickens.", &"_stage_bite", 7],
+	["~ WATCH OUT ~", "Walls and snake bodies cost a life.\n"
+			+ "Face to face the longer snake wins, but an enemy that runs into your body dies.", &"_stage_danger", 0],
+	["~ CLEAR THE LEVEL ~", "Kill all three snakes before the clock runs out.\n"
+			+ "Each level the snakes get faster and the arena smaller. Esc or P pauses.", &"_stage_level", 0],
+]
 const HINTS := ["Eat the chickens to grow.",
 		"See the red glow on that snake? Bite it from the side to kill it!",
 		"Kill all three snakes before the clock runs out."]
 const HINT_RANGE := 10  # cells: an enemy this close gets the second hint
 
+var _demo: Control  # the How to play picture, made once and shown on every page
 
-func _show_how_to() -> void:
+
+## The menu takes the picture out of its slot on other pages; free it here if it is not in the tree.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _demo != null and not _demo.is_inside_tree():
+		_demo.free()
+
+
+## How to play: four pages, each with a live picture of the mechanic. `then` is where the last page
+## leads: back to the title, or straight into a first run.
+func _show_how_to(page := 0, then := Callable()) -> void:
 	_set_screen(Screen.TITLE)
-	_menu.show_page("~ HOW TO PLAY ~", [["Back", show_title.bind(1)]], 0, HOW_TO)
+	if _demo == null:
+		_demo = HowToDemo.new()
+	var entry: Array = HOW_TO_PAGES[page]
+	_demo.show_stage(Callable(self, entry[2]), entry[3])
+	var items := []
+	if page > 0:
+		items.append(["< Prev", _show_how_to.bind(page - 1, then)])
+	if page < HOW_TO_PAGES.size() - 1:
+		items.append(["Next >", _show_how_to.bind(page + 1, then)])
+	elif then.is_valid():
+		items.append(["Play", then])
+	else:
+		items.append(["Done", show_title.bind(1)])
+	_menu.show_page("%s\n%d / %d" % [entry[0], page + 1, HOW_TO_PAGES.size()], items, items.size() - 1,
+			entry[1], false, "", _demo)
+
+
+func how_to_text() -> String:
+	var all := PackedStringArray()
+	for entry in HOW_TO_PAGES:
+		all.append(entry[1])
+	return "\n".join(all)
+
+
+static func _demo_enemy(game: SnakeGame, kind: int, head: Vector2i, heading: Vector2i, length: int) -> void:
+	var cells: Array[Vector2i] = []
+	for i in length:
+		cells.append(head - heading * i)
+	for cell in cells:
+		game._enemy_cells[game._index(cell)] += 1
+	game.enemies.append(Enemy.new(kind, cells, heading, 1.0))
+
+
+static func _stage_eat() -> SnakeGame:
+	var g := SnakeGame.new(18, 8, 1)
+	g.set_body([Vector2i(3, 4), Vector2i(2, 4), Vector2i(1, 4)])
+	g.set_food([Vector2i(6, 4), Vector2i(8, 4), Vector2i(11, 4), Vector2i(14, 2)])
+	g._food_cells[g._index(Vector2i(11, 4))] = SnakeGame.Food.BIG
+	return g
+
+
+static func _stage_bite() -> SnakeGame:
+	var g := SnakeGame.new(18, 8, 1)
+	g.set_food([])
+	g.set_body([Vector2i(5, 4), Vector2i(4, 4), Vector2i(3, 4)])
+	_demo_enemy(g, Enemy.Species.COBRA, Vector2i(9, 4), Vector2i.DOWN, 5)  # its head sits in the player's path
+	_demo_enemy(g, Enemy.Species.MAMBA, Vector2i(15, 1), Vector2i.LEFT, 3)  # keeps the level going
+	return g
+
+
+static func _stage_danger() -> SnakeGame:
+	var g := SnakeGame.new(18, 8, 1)
+	g.set_food([])
+	g.set_body([Vector2i(6, 2), Vector2i(5, 2), Vector2i(4, 2), Vector2i(3, 2)])
+	_demo_enemy(g, Enemy.Species.ANACONDA, Vector2i(9, 2), Vector2i.LEFT, 7)  # face to face, longer
+	_demo_enemy(g, Enemy.Species.MAMBA, Vector2i(5, 5), Vector2i.UP, 3)  # cells 5,5 to 5,7
+	return g
+
+
+static func _stage_level() -> SnakeGame:
+	var g := SnakeGame.new(18, 8, 1)
+	g.set_food([Vector2i(3, 5), Vector2i(14, 4), Vector2i(10, 1)])
+	g.set_body([Vector2i(9, 4), Vector2i(8, 4), Vector2i(7, 4)])
+	_demo_enemy(g, Enemy.Species.ANACONDA, Vector2i(5, 1), Vector2i.RIGHT, 5)
+	_demo_enemy(g, Enemy.Species.COBRA, Vector2i(12, 6), Vector2i.LEFT, 5)
+	_demo_enemy(g, Enemy.Species.MAMBA, Vector2i(15, 2), Vector2i.DOWN, 3)
+	return g
 
 
 ## The highscore table as lines of text; `mark` is the rank to flag as new.
@@ -268,7 +347,7 @@ func start_run() -> void:
 	if not Settings.tutorial_done and not _how_to_offered:
 		_how_to_offered = true
 		_set_screen(Screen.TITLE)
-		_menu.show_page("~ HOW TO PLAY ~", [["Play", start_run]], 0, HOW_TO)
+		_show_how_to(0, start_run)
 		return
 	_new_game()
 	_set_screen(Screen.PLAYING)
