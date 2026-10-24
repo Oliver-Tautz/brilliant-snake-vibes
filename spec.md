@@ -79,7 +79,7 @@ Tier 1 is now the chickens above; tiers 2 and 3 are for later.
   - Enemy's head into the player's body: the enemy dies. Trapping them is a way to kill them.
   - Player's head into an enemy's head from the side: the enemy dies, whatever its length. The two cells right behind its head count as the head too, since fast enemies move up to twice between the player's steps.
   - Head-on (the heads meet face to face): the longer snake wins; on a tie the player wins.
-  - The biteable part (head and the two cells behind it) is marked with a pulsing muted-green glow.
+  - The biteable part (head and the two cells behind it) is marked with a pulsing grey-red glow.
   - Enemies avoid walls, their own bodies and each other; an enemy with no free move dies.
 - Dead enemies burst (gore) and do not come back this level. Their body turns into chickens, one per few segments (**TBD**), tinted in the dead snake's colour; they count as normal chickens.
 - Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.
@@ -133,9 +133,9 @@ Color is used only to make gameplay elements stand out. Everything else stays bl
 
 | Color  | Saturation                       | Used for                                                                |
 | ------ | -------------------------------- | ----------------------------------------------------------------------- |
-| Red    | Strong, the only saturated color | Blood, damage, life loss, danger telegraph                              |
+| Red    | Strong, the only saturated color | Blood, damage, life loss, danger telegraph; a dull grey-red for an enemy's biteable head and neck |
 | Purple | Muted, sickly                    | Bad power-ups, darkness and smokescreen effects, the purple enemy snake |
-| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals, the green enemy snake, an enemy's biteable head and neck |
+| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals, the green enemy snake |
 | Orange | Muted, slightly off              | Big chickens                                                            |
 
 - Chickens left by a dead enemy snake take that snake's colour (green, purple, or ink black).

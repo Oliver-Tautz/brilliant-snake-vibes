@@ -170,8 +170,7 @@ func _draw_enemy(enemy) -> void:
 
 
 ## A pulsing glow behind the cells of an enemy that a bite from the side kills: its head and the next
-## SnakeGame.Cfg.BITE_CELLS - 1 cells (spec §6b). Muted green is the spec's colour for something
-## vulnerable (§11).
+## SnakeGame.Cfg.BITE_CELLS - 1 cells (spec §6b), in a dull grey-red (§11).
 func _draw_bite_zone(path: PackedVector2Array) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.5)
 	var radius := View.CELL * (0.78 + 0.1 * pulse)
