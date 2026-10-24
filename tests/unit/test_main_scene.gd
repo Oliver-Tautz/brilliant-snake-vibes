@@ -497,3 +497,9 @@ func test_dpad_highlight_follows_each_finger() -> void:
 	assert_eq(dpad.lit(), Vector2i.UP)  # finger 0 still holds UP
 	viewport.push_input(_finger(up, false, 0), true)
 	assert_eq(dpad.lit(), Vector2i.ZERO)
+
+
+func test_build_label_shows_which_build_this_is() -> void:
+	var label: Label = main.get_node("HUD/Build")
+	assert_eq(label.text, preload("res://presentation/build_info.gd").LABEL)
+	assert_ne(label.text, "")

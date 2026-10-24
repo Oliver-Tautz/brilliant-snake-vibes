@@ -222,3 +222,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: recorded so the rule is followed from now on: ask the reviewer when tests fail, and re-review after CHANGES REQUESTED.
 - Source: spec §16; user question
 - Revisit if: never; this is a record.
+
+## 2026-10-24 — Branch builds and tagged versions on gh-pages
+- Decision: CI publishes every build into the `gh-pages` branch: `main` at the site root, other branches at `/branch/<name>/` ("/" becomes "-"), tags `v*` at `/v/<version>/` (kept forever); deleting a branch removes its folder. `tools/publish_pages.sh` does it with plain git and retries on concurrent pushes. The game shows its build (`v0.2.0`, `<branch> @ <commit>`, or `local build`) bottom-left, stamped by CI into `presentation/build_info.gd`. Pages must serve the `gh-pages` branch; the old `deploy-pages` job is gone.
+- Decided by: user (branch builds, git-tag versioning, build label in a corner, URL layout); claude (gh-pages folders, plain-git script, slug rule)
+- Why: GitHub's Actions-based Pages deploy replaces the whole site each run, so per-branch folders need a branch-based site. A project repo can only publish under `/brilliant-snake-vibes/`, so the user's `/branch/brilliant-snake-vibes/` became `/brilliant-snake-vibes/branch/<name>/`.
+- Source: user answers; spec §14 (change suggested to the user)
+- Revisit if: the site nears GitHub Pages' 1 GB limit (each build is ~40 MB; the engine .wasm is shared between commits by git but every folder is served).
+
+## 2026-10-24 — Publish script hardening from review
+- Decision: a tag with nothing after the "v" is refused (it would have wiped every version); build labels escape quotes and backslashes; a branch build whose branch was deleted meanwhile is skipped; `gh-pages` itself never triggers a build; the script fetches gh-pages shallowly and always cleans up its worktree and temp branch.
+- Decided by: reviewer (findings); claude (fixes)
+- Why: robustness of a script that deletes folders on the live site.
+- Source: reviewer findings; tests/publish_pages_test.sh (14 checks)
+- Revisit if: two branches whose names slug the same (feature/x, feature-x) are used at once; they share one folder.

@@ -21,6 +21,13 @@ Added on request between steps, so the game can be tried on a tablet.
 - All input goes through `presentation/controls.gd` (spec §13 input layer).
 - Later, in step 3: choose swipe or D-pad in the options menu.
 
+## 1c. Branch builds and versioning — done (waiting for a working push)
+- Every push is published: `main` → https://oliver-tautz.github.io/brilliant-snake-vibes/,
+  branch `dev` → …/brilliant-snake-vibes/branch/dev/, tag `v0.2.0` → …/brilliant-snake-vibes/v/0.2.0/.
+- Deleting a branch removes its folder. The game shows which build it is in the bottom-left corner.
+- User to do once: Settings → Pages → Source: "Deploy from a branch", `gh-pages`, `/ (root)`.
+- Pushing from the user's machine currently hangs on SSH (port 22); see the chat for the port-443 workaround.
+
 ## 2. Frenzier gameplay — proposed
 Problem: growing takes far too long; it should feel frantic.
 Reference from the user: **Pac-Man Championship Edition DX** — as fast and interesting, but in the current

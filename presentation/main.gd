@@ -7,6 +7,7 @@ const GRID_H := 100
 const MAX_TICKS_PER_FRAME := 5
 ## Old Standard TT (SIL OFL 1.1), bundled so the web build gets the same period serif.
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
+const BuildInfo := preload("res://presentation/build_info.gd")
 
 var game: SnakeGame
 var paused := false
@@ -32,8 +33,9 @@ var _hud_state := -1
 
 
 func _ready() -> void:
-	for label in [_status, _banner]:
+	for label in [_status, _banner, $HUD/Build]:
 		label.add_theme_font_override("font", SERIF)
+	$HUD/Build.text = BuildInfo.LABEL
 	_floor.size = Vector2(GRID_W, GRID_H) * View.CELL
 	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 	var film := ($Film/Screen as ColorRect).material as ShaderMaterial
