@@ -6,6 +6,7 @@ signal changed
 const PATH := "user://settings.cfg"
 const MAX_SCORES := 10
 const MAX_START_LEVEL := 10
+const MAX_NAME := 12
 
 var path := PATH  ## overridden by tests
 var gore := true  ## blood, bones and stains; off shows no gore at all
@@ -15,7 +16,8 @@ var view_fit := false  ## camera shows the whole arena instead of following the 
 var music_volume := 100  ## percent, 0 to 100
 var sound_volume := 100  ## percent, 0 to 100, for sound effects
 var muted := false
-var highscores: Array[Dictionary] = []  ## best first: {"score", "level", "date"}
+var player_name := ""  ## last name typed for a highscore, offered again next time
+var highscores: Array[Dictionary] = []  ## best first: {"score", "level", "date", "name"}
 
 
 func _ready() -> void:
@@ -48,6 +50,9 @@ func load_settings() -> void:
 	var saved_muted: Variant = file.get_value("audio", "muted", muted)
 	if typeof(saved_muted) == TYPE_BOOL:
 		muted = saved_muted
+	var saved_name: Variant = file.get_value("game", "player_name", player_name)
+	if typeof(saved_name) == TYPE_STRING:
+		player_name = _clean_name(saved_name)
 	var saved_table: Variant = file.get_value("scores", "table", [])
 	highscores = []
 	if typeof(saved_table) == TYPE_ARRAY:
@@ -56,12 +61,13 @@ func load_settings() -> void:
 				break
 			if typeof(entry) == TYPE_DICTIONARY and typeof(entry.get("score")) == TYPE_INT \
 					and typeof(entry.get("level")) == TYPE_INT and typeof(entry.get("date")) == TYPE_STRING:
-				highscores.append(entry)
+				var saved_entry_name: Variant = entry.get("name")
+				var entry_name := _clean_name(saved_entry_name) if typeof(saved_entry_name) == TYPE_STRING else ""
+				highscores.append({"score": entry["score"], "level": entry["level"], "date": entry["date"], "name": entry_name})
 
 
-## Records a score if it makes the top MAX_SCORES. Empty date means today.
-## Returns the 0-based rank, or -1 if it did not make the table.
-func add_score(score: int, level: int, date := "") -> int:
+## 0-based rank add_score would give this score, or -1 if it would not make the table. Changes nothing.
+func rank_for(score: int) -> int:
 	if score <= 0:
 		return -1
 	var rank := 0
@@ -69,12 +75,28 @@ func add_score(score: int, level: int, date := "") -> int:
 		rank += 1
 	if rank >= MAX_SCORES:
 		return -1
+	return rank
+
+
+## Records a score if it makes the top MAX_SCORES. Empty date means today.
+## Returns the 0-based rank, or -1 if it did not make the table.
+func add_score(score: int, level: int, date := "", name := "") -> int:
+	var rank := rank_for(score)
+	if rank < 0:
+		return -1
 	var stamp: String = date if date != "" else Time.get_date_string_from_system()
-	highscores.insert(rank, {"score": score, "level": level, "date": stamp})
+	highscores.insert(rank, {"score": score, "level": level, "date": stamp, "name": _clean_name(name)})
 	highscores.resize(mini(highscores.size(), MAX_SCORES))
 	save()
 	changed.emit()
 	return rank
+
+
+## Remembers the name typed for a highscore, cleaned like entry names.
+func set_player_name(name: String) -> void:
+	player_name = _clean_name(name)
+	save()
+	changed.emit()
 
 
 func set_gore(on: bool) -> void:
@@ -119,10 +141,16 @@ func set_muted(on: bool) -> void:
 	changed.emit()
 
 
+## Trims and caps a name at MAX_NAME characters.
+func _clean_name(raw: String) -> String:
+	return raw.strip_edges().left(MAX_NAME)
+
+
 ## Writes all settings and the highscores to path.
 func save() -> void:
 	var file := ConfigFile.new()
 	file.set_value("game", "gore", gore)
+	file.set_value("game", "player_name", player_name)
 	file.set_value("game", "show_arrows", show_arrows)
 	file.set_value("game", "start_level", start_level)
 	file.set_value("game", "view_fit", view_fit)

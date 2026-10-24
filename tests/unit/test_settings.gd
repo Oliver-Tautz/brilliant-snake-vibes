@@ -74,7 +74,7 @@ func test_add_score_keeps_top_ten_sorted_and_returns_rank() -> void:
 	assert_eq(settings.highscores.size(), 10)
 	assert_eq(settings.highscores[9]["score"], 20)  # 10 dropped off the end
 	assert_eq(settings.add_score(5, 1, "2026-01-02"), -1)  # too low to enter
-	assert_eq(settings.highscores[5], {"score": 55, "level": 3, "date": "2026-01-02"})
+	assert_eq(settings.highscores[5], {"score": 55, "level": 3, "date": "2026-01-02", "name": ""})
 
 
 func test_equal_score_ranks_below_the_older_entry() -> void:
@@ -94,10 +94,10 @@ func test_add_score_uses_todays_date_by_default() -> void:
 
 func test_highscores_are_saved_and_loaded_again() -> void:
 	settings.add_score(30, 2, "2026-01-01")
-	settings.add_score(70, 4, "2026-01-03")
+	settings.add_score(70, 4, "2026-01-03", "Olli")
 	var fresh := _reloaded()
 	assert_eq(fresh.highscores.size(), 2)
-	assert_eq(fresh.highscores[0], {"score": 70, "level": 4, "date": "2026-01-03"})
+	assert_eq(fresh.highscores[0], {"score": 70, "level": 4, "date": "2026-01-03", "name": "Olli"})
 
 
 func test_corrupt_highscores_are_dropped() -> void:
@@ -189,3 +189,38 @@ func test_bad_saved_audio_settings_fall_back() -> void:
 	assert_eq(fresh.music_volume, 100)
 	assert_eq(fresh.sound_volume, 100)
 	assert_false(fresh.muted)
+
+
+func test_rank_for_tells_where_a_score_would_land_without_adding_it() -> void:
+	assert_eq(settings.rank_for(10), 0)
+	assert_eq(settings.rank_for(0), -1)
+	for i in 10:
+		settings.add_score((i + 1) * 10, 1, "d")
+	assert_eq(settings.rank_for(55), 5)
+	assert_eq(settings.rank_for(10), -1)  # a tie with the last entry ranks below it, off the table
+	assert_eq(settings.rank_for(5), -1)
+	assert_eq(settings.highscores.size(), 10)
+
+
+func test_entry_names_are_trimmed_and_capped() -> void:
+	settings.add_score(10, 1, "d", "   A very long name indeed   ")
+	assert_eq(settings.highscores[0]["name"], "A very long ")
+	assert_eq(settings.highscores[0]["name"].length(), settings.MAX_NAME)
+
+
+func test_old_entries_without_a_name_still_load() -> void:
+	var file := ConfigFile.new()
+	file.set_value("scores", "table", [{"score": 40, "level": 2, "date": "x"}, {"score": 30, "level": 1, "date": "y", "name": 5}])
+	file.save(TEST_PATH)
+	var fresh := _reloaded()
+	assert_eq(fresh.highscores.size(), 2)
+	assert_eq(fresh.highscores[0]["name"], "")
+	assert_eq(fresh.highscores[1]["name"], "")
+
+
+func test_player_name_is_remembered() -> void:
+	settings.load_settings()
+	assert_eq(settings.player_name, "")
+	settings.set_player_name("  Olli  ")
+	assert_eq(settings.player_name, "Olli")
+	assert_eq(_reloaded().player_name, "Olli")
