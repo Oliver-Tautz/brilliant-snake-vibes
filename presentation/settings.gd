@@ -13,6 +13,7 @@ var gore := true  ## blood, bones and stains; off shows no gore at all
 var show_arrows := true  ## on-screen D-pad on touch screens
 var start_level := 1  ## level a new run starts at (spec §5)
 var view_fit := false  ## camera shows the whole arena instead of following the snake (spec §4)
+var sharp := true  ## draw at the screen's own resolution; off renders at the base size and scales up (faster on weak graphics)
 var music_volume := 100  ## percent, 0 to 100
 var sound_volume := 100  ## percent, 0 to 100, for sound effects
 var muted := false
@@ -41,6 +42,9 @@ func load_settings() -> void:
 	var saved_view: Variant = file.get_value("game", "view_fit", view_fit)
 	if typeof(saved_view) == TYPE_BOOL:
 		view_fit = saved_view
+	var saved_sharp: Variant = file.get_value("game", "sharp", sharp)
+	if typeof(saved_sharp) == TYPE_BOOL:
+		sharp = saved_sharp
 	var saved_music: Variant = file.get_value("audio", "music_volume", music_volume)
 	if typeof(saved_music) == TYPE_INT:
 		music_volume = clampi(saved_music, 0, 100)
@@ -123,6 +127,12 @@ func set_view_fit(on: bool) -> void:
 	changed.emit()
 
 
+func set_sharp(on: bool) -> void:
+	sharp = on
+	save()
+	changed.emit()
+
+
 func set_music_volume(percent: int) -> void:
 	music_volume = clampi(percent, 0, 100)
 	save()
@@ -154,6 +164,7 @@ func save() -> void:
 	file.set_value("game", "show_arrows", show_arrows)
 	file.set_value("game", "start_level", start_level)
 	file.set_value("game", "view_fit", view_fit)
+	file.set_value("game", "sharp", sharp)
 	file.set_value("audio", "music_volume", music_volume)
 	file.set_value("audio", "sound_volume", sound_volume)
 	file.set_value("audio", "muted", muted)

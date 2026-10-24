@@ -224,3 +224,19 @@ func test_player_name_is_remembered() -> void:
 	settings.set_player_name("  Olli  ")
 	assert_eq(settings.player_name, "Olli")
 	assert_eq(_reloaded().player_name, "Olli")
+
+
+func test_sharp_graphics_default_on_and_round_trip() -> void:
+	settings.load_settings()
+	assert_true(settings.sharp)
+	watch_signals(settings)
+	settings.set_sharp(false)
+	assert_signal_emitted(settings, "changed")
+	assert_false(_reloaded().sharp)
+
+
+func test_bad_saved_sharp_falls_back() -> void:
+	var file := ConfigFile.new()
+	file.set_value("game", "sharp", "very")
+	file.save(TEST_PATH)
+	assert_true(_reloaded().sharp)
