@@ -471,3 +471,29 @@ func test_emulated_mouse_click_is_ignored_by_dpad() -> void:
 	dpad._gui_input(click)
 	main.game.tick()
 	assert_eq(main.game.direction, Vector2i.RIGHT)
+
+
+func test_board_tap_through_viewport_still_resumes_with_dpad_shown() -> void:
+	var setup := _isolated_main()
+	var viewport: SubViewport = setup[0]
+	var game_main: Node2D = setup[1]
+	game_main._handle_key(KEY_P)
+	game_main._process(0.0)
+	viewport.push_input(_finger(Vector2(300, 300), true), true)
+	viewport.push_input(_finger(Vector2(300, 300), false), true)
+	assert_false(game_main.paused)
+
+
+func test_dpad_highlight_follows_each_finger() -> void:
+	var setup := _isolated_main()
+	var viewport: SubViewport = setup[0]
+	var dpad: Control = setup[1].get_node("HUD/DPad")
+	var up := _arm(dpad, Vector2i.UP)
+	var left := _arm(dpad, Vector2i.LEFT)
+	viewport.push_input(_finger(up, true, 0), true)
+	viewport.push_input(_finger(left, true, 1), true)
+	assert_eq(dpad.lit(), Vector2i.LEFT)
+	viewport.push_input(_finger(left, false, 1), true)
+	assert_eq(dpad.lit(), Vector2i.UP)  # finger 0 still holds UP
+	viewport.push_input(_finger(up, false, 0), true)
+	assert_eq(dpad.lit(), Vector2i.ZERO)

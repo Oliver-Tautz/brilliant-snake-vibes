@@ -7,7 +7,7 @@ const FRAME := Color(0.92, 0.92, 0.9)
 const PANEL := Color(0.03, 0.03, 0.03, 0.8)
 const DIRS: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
-var _lit := Vector2i.ZERO  # the key currently held, drawn highlighted
+var _held := {}  # finger index (-1 for the mouse) -> key it holds; the newest one is drawn lit
 
 
 ## Any finger presses a key directly (not only the first one, which Godot also turns into a mouse
@@ -16,20 +16,28 @@ var _lit := Vector2i.ZERO  # the key currently held, drawn highlighted
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		accept_event()
-		_press(event.position, event.pressed)
+		_press(event.index, event.position, event.pressed)
 	elif event is InputEventScreenDrag:
 		accept_event()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		accept_event()
 		if event.device != InputEvent.DEVICE_ID_EMULATION:
-			_press(event.position, event.pressed)
+			_press(-1, event.position, event.pressed)
 
 
-func _press(point: Vector2, down: bool) -> void:
-	_lit = direction_at(point) if down else Vector2i.ZERO
-	if _lit != Vector2i.ZERO:
-		direction_pressed.emit(_lit)
+func _press(finger: int, point: Vector2, down: bool) -> void:
+	_held.erase(finger)
+	if down:
+		var dir := direction_at(point)
+		if dir != Vector2i.ZERO:
+			_held[finger] = dir
+			direction_pressed.emit(dir)
 	queue_redraw()
+
+
+## The key drawn highlighted: the one pressed most recently by a finger that is still down.
+func lit() -> Vector2i:
+	return _held.values().back() if not _held.is_empty() else Vector2i.ZERO
 
 
 ## Which arm of the cross a point hits, or ZERO for the hub.
@@ -44,6 +52,7 @@ func direction_at(point: Vector2) -> Vector2i:
 
 func _draw() -> void:
 	var key := size / 3.0
+	var _lit := lit()
 	for dir in DIRS:
 		var rect := Rect2(key * (Vector2(dir) + Vector2.ONE), key).grow(-3.0)
 		draw_rect(rect, FRAME if dir == _lit else PANEL)
