@@ -250,3 +250,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: keeps worker output reviewable and separable in history, and stops the worker from tripping over rules it cannot follow.
 - Source: user instructions; reviewer findings
 - Revisit if: the worker regularly reports BLOCKED on reasonable briefs.
+
+## 2026-10-24 — usage-guard block message without PROGRESS.md
+- Decision: the block message is now "Usage at X (5h) / Y (week). Stop and summarize where you are."; the README no longer suggests a PROGRESS.md.
+- Decided by: user (the repo has no PROGRESS.md)
+- Why: the hook blocks every tool, so asking the agent to update a file could never succeed.
+- Source: reviewer finding raised with the user
+- Revisit if: a progress file is introduced and should pass the hook.

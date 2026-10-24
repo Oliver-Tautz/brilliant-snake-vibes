@@ -13,7 +13,7 @@ echo "{\"five_hour\":{\"used_percentage\":79,\"resets_at\":$future},\"seven_day\
 check "79% allowed" 0 "$(guard)"
 echo "{\"five_hour\":{\"used_percentage\":80,\"resets_at\":$future},\"seven_day\":{\"used_percentage\":10,\"resets_at\":$future}}" >"$USAGE_GUARD_FILE"
 check "80% 5h blocked" 2 "$(guard)"
-grep -q "Usage at 80% (5h) / 10% (week)" "$tmp/err" && echo "ok   block message" || { echo "FAIL block message"; fail=1; }
+grep -qx "Usage at 80% (5h) / 10% (week). Stop and summarize where you are." "$tmp/err" && echo "ok   block message" || { echo "FAIL block message"; fail=1; }
 echo "{\"five_hour\":{\"used_percentage\":5,\"resets_at\":$future},\"seven_day\":{\"used_percentage\":85.5,\"resets_at\":$future}}" >"$USAGE_GUARD_FILE"
 check "85% week blocked" 2 "$(guard)"
 echo "{\"five_hour\":{\"used_percentage\":95,\"resets_at\":$past},\"seven_day\":{\"used_percentage\":10,\"resets_at\":$future}}" >"$USAGE_GUARD_FILE"

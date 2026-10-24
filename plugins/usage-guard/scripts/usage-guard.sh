@@ -21,7 +21,7 @@ over() { [ "${1:--}" != "-" ] && awk -v p="$1" -v t="$threshold" 'BEGIN { exit !
 
 if over "$five" || over "$week"; then
   fmt() { [ "${1:--}" = "-" ] && echo "n/a" || printf '%.0f%%' "$1"; }
-  echo "Usage at $(fmt "$five") (5h) / $(fmt "$week") (week). Stop. Update PROGRESS.md if possible and summarize where you are." >&2
+  echo "Usage at $(fmt "$five") (5h) / $(fmt "$week") (week). Stop and summarize where you are." >&2
   exit 2
 fi
 exit 0

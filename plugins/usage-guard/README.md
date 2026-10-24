@@ -50,6 +50,6 @@ Uses a temp file, never `~/.claude`. Requires `jq`.
 - The value is only as fresh as the last API response, so usage can overshoot the threshold slightly.
 - `rate_limits` only exists for claude.ai Pro and Max plans, and only after the first API response in a session. Until then (or with no file) nothing is blocked.
 - A window whose `resets_at` has passed is treated as stale and ignored.
-- The hook blocks all tool calls, including file writes, so the agent cannot save progress once it trips. Keep a PROGRESS.md updated after each task.
+- The hook blocks all tool calls, including file writes, so the agent can only summarize in chat once it trips.
 - Not verified: whether the status line runs in the VS Code extension. The docs describe it as a terminal feature, so if it does not, run Claude Code in VS Code's integrated terminal.
 - The hook fails open: a corrupt or unreadable usage file never blocks.
