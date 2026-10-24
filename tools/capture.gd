@@ -1,6 +1,6 @@
 ## Renders the main scene in a staged state and saves a screenshot.
 ## Usage: godot --path . -s tools/capture.gd -- <out.png> [scenario]
-## Scenarios: title, options, start, paused (pause menu), play (runs live), corners (long snake with
+## Scenarios: title, options, howto, start, paused (pause menu), play (runs live), corners (long snake with
 ## turns, mid-tick), eat (gore), edge (snake near the top-left wall), touch (corners with the D-pad),
 ## enemies (the three enemy snakes, big, hopping and coloured chickens).
 ## Optional third arg: a WallStyle index to override the seed.
@@ -37,7 +37,7 @@ func _process(_delta: float) -> bool:
 	_frame += 1
 	if _frame == 2:
 		_stage()
-	if _frame > 2 and not _scenario in ["title", "options", "paused"]:
+	if _frame > 2 and not _scenario in ["title", "options", "howto", "paused"]:
 		_main.get_node("HUD/Menu").visible = false
 	if _frame < (PLAY_FRAMES if _scenario == "play" else FRAMES):
 		return false
@@ -51,6 +51,9 @@ func _stage() -> void:
 		return
 	if _scenario == "options":
 		_main._show_options(_main.Screen.TITLE)
+		return
+	if _scenario == "howto":
+		_main._show_how_to()
 		return
 	_main.start_run()
 	if _scenario == "play":  # unstaged: the game simply runs until the capture frame

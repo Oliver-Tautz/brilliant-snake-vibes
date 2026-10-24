@@ -53,6 +53,7 @@ func _ready() -> void:
 	_list.add_child(_heading)
 	_list.add_child(_body)
 	_list.add_child(_field)
+	_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER  # a one-column page sits under the heading, not at the left
 	_grid.add_theme_constant_override("v_separation", ROW_GAP)
 	_grid.add_theme_constant_override("h_separation", ROW_GAP * 2)
 	_list.add_child(_grid)
