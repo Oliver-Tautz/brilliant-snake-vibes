@@ -12,6 +12,9 @@ var gore := true  ## blood, bones and stains; off shows no gore at all
 var show_arrows := true  ## on-screen D-pad on touch screens
 var start_level := 1  ## level a new run starts at (spec §5)
 var view_fit := false  ## camera shows the whole arena instead of following the snake (spec §4)
+var music_volume := 100  ## percent, 0 to 100
+var sound_volume := 100  ## percent, 0 to 100, for sound effects
+var muted := false
 var highscores: Array[Dictionary] = []  ## best first: {"score", "level", "date"}
 
 
@@ -36,6 +39,15 @@ func load_settings() -> void:
 	var saved_view: Variant = file.get_value("game", "view_fit", view_fit)
 	if typeof(saved_view) == TYPE_BOOL:
 		view_fit = saved_view
+	var saved_music: Variant = file.get_value("audio", "music_volume", music_volume)
+	if typeof(saved_music) == TYPE_INT:
+		music_volume = clampi(saved_music, 0, 100)
+	var saved_sound: Variant = file.get_value("audio", "sound_volume", sound_volume)
+	if typeof(saved_sound) == TYPE_INT:
+		sound_volume = clampi(saved_sound, 0, 100)
+	var saved_muted: Variant = file.get_value("audio", "muted", muted)
+	if typeof(saved_muted) == TYPE_BOOL:
+		muted = saved_muted
 	var saved_table: Variant = file.get_value("scores", "table", [])
 	highscores = []
 	if typeof(saved_table) == TYPE_ARRAY:
@@ -89,6 +101,24 @@ func set_view_fit(on: bool) -> void:
 	changed.emit()
 
 
+func set_music_volume(percent: int) -> void:
+	music_volume = clampi(percent, 0, 100)
+	save()
+	changed.emit()
+
+
+func set_sound_volume(percent: int) -> void:
+	sound_volume = clampi(percent, 0, 100)
+	save()
+	changed.emit()
+
+
+func set_muted(on: bool) -> void:
+	muted = on
+	save()
+	changed.emit()
+
+
 ## Writes all settings and the highscores to path.
 func save() -> void:
 	var file := ConfigFile.new()
@@ -96,5 +126,8 @@ func save() -> void:
 	file.set_value("game", "show_arrows", show_arrows)
 	file.set_value("game", "start_level", start_level)
 	file.set_value("game", "view_fit", view_fit)
+	file.set_value("audio", "music_volume", music_volume)
+	file.set_value("audio", "sound_volume", sound_volume)
+	file.set_value("audio", "muted", muted)
 	file.set_value("scores", "table", highscores)
 	file.save(path)

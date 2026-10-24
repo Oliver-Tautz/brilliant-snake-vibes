@@ -148,3 +148,44 @@ func test_bad_saved_start_level_and_view_fall_back() -> void:
 	file.set_value("game", "start_level", "x")
 	file.save(TEST_PATH)
 	assert_eq(_reloaded().start_level, 1)
+
+
+func test_audio_settings_default_and_round_trip() -> void:
+	settings.load_settings()
+	assert_eq(settings.music_volume, 100)
+	assert_eq(settings.sound_volume, 100)
+	assert_false(settings.muted)
+	settings.set_music_volume(25)
+	settings.set_sound_volume(50)
+	settings.set_muted(true)
+	var fresh := _reloaded()
+	assert_eq(fresh.music_volume, 25)
+	assert_eq(fresh.sound_volume, 50)
+	assert_true(fresh.muted)
+
+
+func test_volumes_are_clamped_to_zero_to_hundred() -> void:
+	settings.set_music_volume(-10)
+	assert_eq(settings.music_volume, 0)
+	settings.set_sound_volume(250)
+	assert_eq(settings.sound_volume, 100)
+
+
+func test_audio_settings_emit_changed() -> void:
+	watch_signals(settings)
+	settings.set_music_volume(75)
+	settings.set_sound_volume(75)
+	settings.set_muted(true)
+	assert_signal_emit_count(settings, "changed", 3)
+
+
+func test_bad_saved_audio_settings_fall_back() -> void:
+	var file := ConfigFile.new()
+	file.set_value("audio", "music_volume", "loud")
+	file.set_value("audio", "sound_volume", 400)
+	file.set_value("audio", "muted", 1)
+	file.save(TEST_PATH)
+	var fresh := _reloaded()
+	assert_eq(fresh.music_volume, 100)
+	assert_eq(fresh.sound_volume, 100)
+	assert_false(fresh.muted)
