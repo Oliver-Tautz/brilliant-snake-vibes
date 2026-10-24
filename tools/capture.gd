@@ -1,7 +1,8 @@
 ## Renders the main scene in a staged state and saves a screenshot.
 ## Usage: godot --path . -s tools/capture.gd -- <out.png> [scenario]
 ## Scenarios: start, paused, play (runs live), corners (long snake with turns, mid-tick), eat (gore),
-## edge (snake near the top-left wall). Optional third arg: a WallStyle index to override the seed.
+## edge (snake near the top-left wall), touch (corners with the touch D-pad shown).
+## Optional third arg: a WallStyle index to override the seed.
 extends SceneTree
 
 const FRAMES := 30
@@ -71,6 +72,8 @@ func _stage() -> void:
 	game.last_tick_moved = true
 	game.tail_vacated = c - Vector2i(11, 0)
 	_main._accumulator = game.tick_interval() * 0.5
+	if _scenario == "touch":
+		_main.get_node("HUD/DPad").visible = true
 	if _scenario == "eat":
 		_main.play_eat_effect(c + Vector2i(1, 0))
 		_main.play_eat_effect(c + Vector2i(-3, 2))

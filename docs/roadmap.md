@@ -14,6 +14,13 @@ Problem: the game was very slow in the browser on the user's integrated-graphics
 - Fixes: all circles, ellipses, snake segments and blood drops are quads of one generated disc texture so they batch; the game renders at 1152x648 and is scaled up to the window.
 - Still open: dense prey (400 on screen) costs ~21 ms on the fast GPU. Matters for the frenzy step; the fix would be pre-rendered prey sprites.
 
+## 1b. Touch controls — done (waiting for the user's tablet test)
+Added on request between steps, so the game can be tried on a tablet.
+- Swipe anywhere (one zig-zag gesture can queue two turns), on-screen D-pad (bottom-right, shown on touch
+  screens), always-visible pause button (top-right), tap to resume or restart.
+- All input goes through `presentation/controls.gd` (spec §13 input layer).
+- Later, in step 3: choose swipe or D-pad in the options menu.
+
 ## 2. Frenzier gameplay — proposed
 Problem: growing takes far too long; it should feel frantic.
 Reference from the user: **Pac-Man Championship Edition DX** — as fast and interesting, but in the current

@@ -201,3 +201,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: same view on every device is fairer and simpler; it falls out of the performance fix.
 - Source: reviewer finding; spec §4 (zoom scales with grid size, minimum snake size on screen TBD)
 - Revisit if: the user wants big screens to show more of the board.
+
+## 2026-10-24 — Touch controls through one input layer
+- Decision: a `Controls` node turns keyboard, swipes and taps into the same signals (turn, pause, confirm, perf); the on-screen D-pad and an always-visible pause button feed the same handlers. Until the options menu exists, swipe and D-pad are both active: swipe anywhere, D-pad bottom-right, shown on touch screens (or after the first touch). A tap resumes a paused game or starts a new one after game over. One zig-zag swipe can queue two turns.
+- Decided by: user (touch controls now, for a tablet test); claude (both schemes at once, tap to confirm, swipe threshold 28 px)
+- Why: spec §3 wants swipe or D-pad selectable in options and a visible pause button; spec §13 wants one input interface. The menu (roadmap step 3) will add the swipe / D-pad choice.
+- Source: spec §3, §12, §13; user request
+- Revisit if: the D-pad covers too much of the board on small phones, or the user prefers one scheme by default.
+
+## 2026-10-24 — Multi-touch fixes for tablets
+- Decision: the D-pad and pause button act on any finger's touch directly (desktop mouse clicks still work; clicks Godot emulates from the first finger are ignored so nothing fires twice). Swipes follow the newest finger. A tap only confirms if it started while paused or after game over. The D-pad and pause button are routed through `Controls`, so all input goes through one node.
+- Decided by: reviewer (found a resting thumb made the D-pad and pause button dead, blocked swipes, and lifting a finger after death skipped the end card); claude (fixes)
+- Why: people hold tablets with a thumb on the screen; only the first finger becomes a mouse click in Godot.
+- Source: reviewer findings; spec §3, §13. Verified with tests that push real touches through an isolated viewport.
+- Revisit if: tablet testing shows swipes feel too sensitive or too sluggish (SWIPE_MIN = 28 px).

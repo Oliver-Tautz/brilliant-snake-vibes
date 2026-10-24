@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1"]
 [ext_resource type="Script" path="res://presentation/floor.gd" id="2"]
@@ -8,6 +8,9 @@
 [ext_resource type="Script" path="res://presentation/intertitle.gd" id="6"]
 [ext_resource type="Shader" path="res://presentation/film.gdshader" id="7"]
 [ext_resource type="Script" path="res://presentation/perf_overlay.gd" id="8"]
+[ext_resource type="Script" path="res://presentation/controls.gd" id="9"]
+[ext_resource type="Script" path="res://presentation/dpad.gd" id="10"]
+[ext_resource type="Script" path="res://presentation/pause_button.gd" id="11"]
 
 [sub_resource type="ShaderMaterial" id="floor_mat"]
 shader = ExtResource("3")
@@ -84,6 +87,37 @@ grow_vertical = 2
 label_settings = SubResource("text")
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="Pause" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -86.0
+offset_top = 14.0
+offset_right = -14.0
+offset_bottom = 66.0
+grow_horizontal = 0
+script = ExtResource("11")
+
+[node name="DPad" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -254.0
+offset_top = -254.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+script = ExtResource("10")
+
+[node name="Controls" type="Node" parent="."]
+script = ExtResource("9")
 
 [node name="Film" type="CanvasLayer" parent="."]
 layer = 2
