@@ -1,0 +1,6 @@
+{
+  "name": "usage-guard",
+  "version": "0.1.0",
+  "description": "Blocks tool calls once claude.ai plan usage reaches a threshold (default 80%)",
+  "author": { "name": "Oliver Tautz" }
+}

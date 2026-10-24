@@ -1,12 +1,19 @@
 {
   "name": "brilliant-snake-vibes",
   "description": "Agent tools for the brilliant-snake-vibes project",
-  "owner": { "name": "Oliver Tautz" },
+  "owner": {
+    "name": "Oliver Tautz"
+  },
   "plugins": [
     {
       "name": "snake-tools",
       "source": "./plugins/snake-tools",
       "description": "Tools for Claude to build, run and test the Godot Snake game"
+    },
+    {
+      "name": "usage-guard",
+      "source": "./plugins/usage-guard",
+      "description": "Blocks tool calls once plan usage reaches a threshold (default 80%)"
     }
   ]
 }

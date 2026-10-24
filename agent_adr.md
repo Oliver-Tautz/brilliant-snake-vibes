@@ -236,3 +236,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: robustness of a script that deletes folders on the live site.
 - Source: reviewer findings; tests/publish_pages_test.sh (14 checks)
 - Revisit if: two branches whose names slug the same (feature/x, feature-x) are used at once; they share one folder.
+
+## 2026-10-24 — usage-guard plugin design
+- Decision: `plugins/usage-guard`: the status line script saves `rate_limits` to `~/.claude/usage.json` (temp file + mv); a PreToolUse hook on all tools exits 2 when the 5-hour or weekly usage is at or above `USAGE_GUARD_THRESHOLD` (default 80). It fails open on a missing or unreadable file, ignores windows whose numeric `resets_at` is in the past, treats a missing or non-numeric `resets_at` as current, and falls back to 80 for a non-numeric threshold.
+- Decided by: user (80% default, block all tools, status-line-to-file design, message text); claude (fail-open, stale-window handling, threshold fallback); reviewer (non-numeric resets_at, threshold fallback, per-session temp file)
+- Why: plugins cannot set the status line, so the hook reads a file the status line writes. Blocking every tool is the user's choice; it means the block message's "Update PROGRESS.md if possible" can never succeed (no write tool gets through, and the repo has no PROGRESS.md). Kept as the user specified and raised with the user.
+- Source: user's usage-guard task; reviewer findings
+- Revisit if: the user wants writes to a progress file to pass the hook.
+
+## 2026-10-24 — simple-task-worker conventions
+- Decision: the user's `simple-task-worker` agent (haiku, no Edit tool, never commits) handles small changes; its changes stay uncommitted until the reviewer approves the whole set, then go into their own `worker:` commits. AGENTS.md rules meant for the main agent are explicitly not the worker's: it reports judgment calls instead of logging them, and only edits inside its brief.
+- Decided by: user (agent, separate worker commits, one review per set); reviewer (worker scope line, uncommitted until approved)
+- Why: keeps worker output reviewable and separable in history, and stops the worker from tripping over rules it cannot follow.
+- Source: user instructions; reviewer findings
+- Revisit if: the worker regularly reports BLOCKED on reasonable briefs.
