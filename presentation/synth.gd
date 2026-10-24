@@ -6,7 +6,7 @@ class_name Synth
 extends RefCounted
 
 const RATE := 22050
-const CHUNK := 2048  # samples of work per step: well under a millisecond or two
+const CHUNK := 1024  # samples of work per step: about a millisecond natively
 enum Wave { SINE, TRIANGLE, SAW, SQUARE }
 enum Pass { LOWPASS, ECHO, CRACKLE }
 

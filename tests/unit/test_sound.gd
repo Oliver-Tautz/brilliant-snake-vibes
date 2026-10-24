@@ -43,7 +43,9 @@ func test_music_loops_follow_the_seed_tempo() -> void:
 	var stream := SoundBank.music(&"game").finish_now()
 	assert_eq(stream.loop_mode, AudioStreamWAV.LOOP_FORWARD)
 	var seconds := stream.data.size() / 2.0 / Synth.RATE
-	assert_almost_eq(seconds, 16 * 2 * 60.0 / SoundDirection.rag_bpm, 0.01)  # 16 bars of 2/4
+	var bars := SoundBank.music_bars(&"game").size()
+	assert_almost_eq(seconds, bars * 2 * 60.0 / SoundDirection.rag_bpm, 0.01)  # bars of 2/4
+	assert_gt(seconds, 25.0)  # long enough not to be heard restarting
 
 
 func test_every_build_step_is_small() -> void:
@@ -143,4 +145,40 @@ func test_music_built_while_paused_starts_paused() -> void:
 	Sound._start_music()  # what happens when the loop finishes building
 	assert_true(Sound._music.stream_paused)
 	Sound.pause_music(false)
+	Sound.stop_music()
+
+
+func test_waltz_is_long_too() -> void:
+	var bars := SoundBank.music_bars(&"title").size()
+	assert_gt(bars * 3 * 60.0 / SoundDirection.waltz_bpm, 30.0)
+
+
+func test_asking_for_the_playing_loop_again_does_not_restart_it() -> void:
+	Sound.stop_music()
+	Sound.play_music(&"title")
+	var playback := Sound._music.get_stream_playback()
+	Sound._music.stop()  # as if the browser reported it stopped; Sound must not rely on that
+	Sound.play_music(&"title")
+	assert_eq(Sound._playing_name, &"title")
+	Sound.play_music(&"game")
+	assert_eq(Sound._playing_name, &"game")
+	assert_ne(Sound._music.get_stream_playback(), playback)
+	Sound.stop_music()
+	assert_eq(Sound._playing_name, &"")
+
+
+func test_leaving_before_the_rag_is_built_keeps_the_waltz() -> void:
+	var rag: AudioStreamWAV = Sound._streams[&"game"]
+	Sound._streams.erase(&"game")  # as if still being built
+	Sound.stop_music()
+	Sound.play_music(&"title")
+	Sound.play_music(&"game")  # a run starts; the waltz carries on meanwhile
+	assert_eq(Sound._playing_name, &"title")
+	Sound.play_music(&"title")  # back to the title before the rag is ready
+	Sound._on_built(&"game", rag)  # the rag finishes building
+	assert_eq(Sound.music_name(), &"title")
+	assert_eq(Sound._playing_name, &"title")
+	assert_eq(Sound._music.stream, Sound._streams[&"title"])
+	Sound.play_music(&"game")
+	assert_eq(Sound._music.stream, rag)
 	Sound.stop_music()

@@ -422,3 +422,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: user reports with a screenshot.
 - Source: user messages; performance numbers in docs/roadmap.md step 1
 - Revisit if: the user's integrated-graphics laptop is slow again in Sharp mode (then Fast could become the default there).
+
+## 2026-10-24 — Music no longer restarts on every settings change
+- Decision: the Sound autoload tracks which loop it actually started (`_playing_name`) and ignores requests for that loop, instead of asking the player whether it is playing. Every options change rebuilds the page, which asks for the menu music again, and in the browser the player reported playing = false for the looping sound, so it restarted each time. The loops are also longer, so a repeat is not heard as a restart: the waltz is 24 bars in A B A form (about 41 s) and the rag 48 bars in A B A C A B form (about 33 s). The melody keeps walking, so repeated sections differ. The synthesis chunk is halved to 1,024 samples; worst step 1.9 ms natively, about 2.2 s of synthesis in total spread over frames.
+- Decided by: user (bug report); claude (fix, song forms); reviewer (the wanted loop is recorded even while it is still being built, so leaving a run before the rag is ready does not start the rag on the title later)
+- Why: "Music restarts all the time ... when I change settings".
+- Source: user messages
+- Revisit if: it still restarts in the browser.

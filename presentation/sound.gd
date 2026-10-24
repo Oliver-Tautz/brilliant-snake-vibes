@@ -14,6 +14,7 @@ var _next_player := 0
 var _music: AudioStreamPlayer
 var _music_name := &""  # the loop that should be playing, even if it is not built yet
 var _music_pitch := 1.0
+var _playing_name := &""  # the loop actually started on the player; browsers may report playing = false
 var _music_paused := false  # kept here too, so a loop that finishes building while paused starts paused
 
 
@@ -57,12 +58,18 @@ func build_step() -> bool:
 	if _job == null:
 		_job = SoundBank.job(name)
 	if _job.step():
-		_streams[name] = _job.stream
+		var stream := _job.stream
 		_job = null
 		_to_build.pop_front()
-		if name == _music_name:
-			_start_music()
+		_on_built(name, stream)
 	return true
+
+
+## A sound is ready; a loop that is wanted right now starts playing.
+func _on_built(name: StringName, stream: AudioStreamWAV) -> void:
+	_streams[name] = stream
+	if name == _music_name and name != _playing_name:
+		_start_music()
 
 
 ## Builds everything at once (tests and tools).
@@ -92,16 +99,17 @@ func play(name: StringName, volume_db := 0.0, pitch_jitter := 0.06) -> void:
 func play_music(name: StringName, pitch := 1.0) -> void:
 	_music_pitch = pitch
 	_music.pitch_scale = pitch
-	# Already on this loop (a paused player reports playing = false): carry on where it was.
-	if name == _music_name and _music.stream != null and _music.stream == _streams.get(name) \
-			and (_music.playing or _music.stream_paused):
+	_music_name = name  # also when it is not built yet: it starts once it is
+	# Already on this loop: carry on where it was. Tracked here, because a paused player, and a looping
+	# one in some browsers, reports playing = false.
+	if name == _playing_name:
 		return
-	_music_name = name
 	_start_music()
 
 
 func stop_music() -> void:
 	_music_name = &""
+	_playing_name = &""
 	_music.stop()
 
 
@@ -124,6 +132,7 @@ func _start_music() -> void:
 	_music.stream = _streams[_music_name]
 	_music.pitch_scale = _music_pitch
 	_music.play()
+	_playing_name = _music_name
 	_music.stream_paused = _music_paused
 
 

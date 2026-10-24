@@ -95,13 +95,37 @@ static func piano(j: S.Job, at: float, hz: float, length: float, volume: float) 
 			j.note(at, length, hz * 4.0, S.Wave.SINE, volume * 0.25, -1.0, 14.0)
 
 
+## Chord roots (scale degrees) of each section, and the form built from them. Long forms with a
+## contrasting section, so the loop is not heard restarting every few seconds.
+const WALTZ_SECTIONS := {
+	"A": [0, 3, 4, 0, 5, 3, 4, 0],  # i iv V i VI iv V i
+	"B": [5, 5, 3, 3, 0, 0, 4, 4],
+}
+const RAG_SECTIONS := {
+	"A": [0, 0, 3, 3, 0, 0, 4, 4],
+	"B": [5, 5, 3, 3, 4, 4, 0, 0],
+	"C": [3, 3, 0, 0, 5, 5, 4, 4],
+}
+const WALTZ_FORM := ["A", "B", "A"]
+const RAG_FORM := ["A", "B", "A", "C", "A", "B"]
+
+
+## The chord of every bar of a music loop.
+static func music_bars(name: StringName) -> Array:
+	var waltz := name == &"title"
+	var bars := []
+	for section in WALTZ_FORM if waltz else RAG_FORM:
+		bars.append_array((WALTZ_SECTIONS if waltz else RAG_SECTIONS)[section])
+	return bars
+
+
 ## A music loop: "title" is a slow minor waltz (seed[1]), "game" a fast stride-piano rag (seed[0]).
-## Chord roots as scale degrees: i iv V i VI iv V i, the rag twice as long with each chord held.
+## The melody keeps walking, so every pass through a section sounds a little different.
 static func music(name: StringName) -> S.Job:
 	var waltz := name == &"title"
 	var beats := 3 if waltz else 2
 	var beat := 60.0 / (D.waltz_bpm if waltz else D.rag_bpm)
-	var bars: Array = [0, 3, 4, 0, 5, 3, 4, 0] if waltz else [0, 0, 3, 3, 0, 0, 4, 4, 5, 5, 3, 3, 4, 4, 0, 0]
+	var bars := music_bars(name)
 	var j := S.Job.new(bars.size() * beats * beat, true, 0.7)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = D.melody_seed + (1 if waltz else 2)
