@@ -380,3 +380,25 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the user died biting heads from the side; the spec's contact list already made an enemy's head into the player's body fatal for the enemy.
 - Source: user messages; spec §6b
 - Revisit if: the user does not want the neck counted as the head.
+
+## 2026-10-24 — Synthesised audio from the "snake-sounds" seed
+- Decision: all sound is synthesised in GDScript at startup (spec §10, §17), with no audio files:
+  - `Synth`: sine / triangle / saw / square notes with slides, vibrato and exponential decay; filtered noise; a one-pole low-pass; echo; gramophone crackle; 16-bit AudioStreamWAV at 22,050 Hz.
+  - `SoundBank` holds the recipes. `SoundDirection` decodes divine_inspiration("snake-sounds") into tempos, key, mode, piano style, detune, crackle, swing, gulp, squawk and crunch pitches, echo, vibrato and the melody seed; every line cites its seed position.
+  - The `Sound` autoload builds the effects first, then the two music loops a bar at a time within 4 ms per frame, so the single-threaded web build never stalls. It plays effects from a pool of 8 players and runs the music on its own bus.
+- Sounds:
+  - Effects: click, gulp, squawk (when a visible chicken winds up a hop), crunch and splat (Gore on only), crash, enemy death (slide whistle), life lost ("wah wah wah wahhh" trombone), level-cleared fanfare, ticks in the last 10 s, time-up gong.
+  - Music: an 8-bar minor waltz for the title and its options, and a 16-bar stride rag in game, sped up 3% per level (at most 30%), held while paused, silent after the end.
+- Options: Music and Sounds step 100/75/50/25/0 %, and Mute. All three are saved and applied to the Music and SFX buses.
+- `tools/export_sounds.gd` writes every sound as a WAV for listening.
+- Decided by: user (synthesis by code, the sound list and style, the first try); claude (the synth design, recipes, seed mapping, volume steps); worker (audio settings storage, from my brief)
+- Why: spec §10 asks for music, effects, volumes and mute; §17 asks for assets as code. I cannot listen, so the sounds were checked by measuring length, peak, envelope and clicks.
+- Source: spec §10, §17; user approval of the audio plan
+- Revisit if: the user's ears say otherwise (expected).
+
+## 2026-10-24 — Audio review: chunked synthesis, music resume
+- Decision: synthesis is resumable in chunks of 2,048 samples. A `Synth.Job` collects voices (notes, noise) and passes (low-pass, echo, crackle), then renders, scans the peak and encodes a chunk per step; voices and passes keep their state between steps. Measured natively: worst step 0.87 ms (was 79 ms), all sounds 0.8 s in total spread over frames; the earlier ADR claim of "within 4 ms per frame" only holds now. Resuming from pause keeps the music's place (a paused player reports playing = false, which restarted it). The Sound autoload remembers the pause state, so a loop that finishes building while paused starts paused. Music and Sounds use 100/75/50/25/0 % step buttons, not the sliders spec §10 names; that is raised with the user.
+- Decided by: reviewer (findings); claude (fixes); user to decide sliders vs steps
+- Why: the single-threaded web build would have hitched for hundreds of ms on the title screen.
+- Source: reviewer findings; timing scripts in the session
+- Revisit if: the user wants real sliders.

@@ -27,6 +27,7 @@ var _hud_lives := -1
 var _hud_length := -1
 var _hud_extra := -1  # level, seconds left and foes left, packed into one number
 var _options_from := Screen.TITLE  # where Back in the options leads
+var _last_tick := -1  # last whole second of the level timer that ticked
 var _touch_seen := DisplayServer.is_touchscreen_available()
 
 @onready var _camera: Camera2D = $Camera2D
@@ -78,9 +79,13 @@ func _process(delta: float) -> void:
 		if game.game_over:
 			_show_over()
 		elif game.level_won:
+			Sound.play(&"fanfare")
 			_show_break("~ LEVEL %d CLEARED ~" % game.level, "Next level", _next_level)
 		elif game.last_time_up:
+			Sound.play(&"gong")
 			_show_break("~ TIME'S UP ~\nThe level starts over", "Continue", resume)
+		else:
+			_tick_last_seconds()
 	_world.t = clampf(_accumulator / game.tick_interval(), 0.0, 1.0) if game.last_tick_moved else 1.0
 	if _pending_eat.x >= 0 and _world.t >= 0.85:
 		_burst_pending_eat()
@@ -105,6 +110,21 @@ func _play_events(head_before: Vector2i) -> void:
 		var crash := (View.center(head_before) + View.center(game.last_crash)) / 2.0
 		_gore.burst(crash, 60, 420.0, 5)
 		_shake = View.SHAKE_TIME
+		_play_crash_sounds()
+
+
+func _play_crash_sounds() -> void:
+	Sound.play(&"crash")
+	Sound.play(&"splat")
+	Sound.play(&"life_lost", -3.0, 0.0)
+
+
+## A clock tick for each of the last 10 seconds of a level (spec §10).
+func _tick_last_seconds() -> void:
+	var seconds := int(ceilf(game.time_left()))
+	if game.level > 0 and seconds <= 10 and seconds != _last_tick:
+		Sound.play(&"tick", 0.0, 0.0)
+	_last_tick = seconds
 
 
 ## Gore for what happened on the enemies' and the level's own clock: enemy deaths (also those from
@@ -113,12 +133,17 @@ func _play_clock_events() -> void:
 	for cell in game.enemy_deaths:
 		_gore.burst(View.center(cell), 50, 380.0, 4)
 		_shake = View.SHAKE_TIME * 0.6
+		Sound.play(&"enemy_die")
+		Sound.play(&"splat")
 	game.enemy_deaths.clear()
+	if game.last_hop.x >= 0 and _world.view_rect.has_point(View.center(game.last_hop)):
+		Sound.play(&"squawk", -6.0, 0.15)
 	if game.last_time_up:
 		_on_level_started()
 	elif game.last_life_lost:
 		_gore.burst(View.center(game.last_crash), 60, 420.0, 5)
 		_shake = View.SHAKE_TIME
+		_play_crash_sounds()
 
 
 func _burst_pending_eat() -> void:
@@ -129,6 +154,8 @@ func _burst_pending_eat() -> void:
 
 func play_eat_effect(cell: Vector2i) -> void:
 	_gore.burst(View.center(cell), 22, 260.0, 2)
+	Sound.play(&"gulp")
+	Sound.play(&"crunch", -4.0)
 	_world.eat_pulse = View.EAT_PULSE
 
 
@@ -236,6 +263,9 @@ func _show_options(from: Screen, focus := 0) -> void:
 		["Arrows on touch: %s" % ("Shown" if Settings.show_arrows else "Hidden"), _toggle_arrows],
 		["Start level: %d" % Settings.start_level, _next_start_level],
 		["View: %s" % ("Whole arena" if Settings.view_fit else "Follow"), _toggle_view],
+		["Music: %d%%" % Settings.music_volume, _next_music_volume],
+		["Sounds: %d%%" % Settings.sound_volume, _next_sound_volume],
+		["Mute: %s" % ("On" if Settings.muted else "Off"), _toggle_mute],
 	]
 	if can_fullscreen():
 		items.append(["Fullscreen: %s" % ("On" if is_fullscreen() else "Off"), _toggle_fullscreen])
@@ -264,11 +294,31 @@ func _toggle_view() -> void:
 	_show_options(_options_from, 3)
 
 
+## Volumes step 100, 75, 50, 25, 0 and round again (spec §10).
+func _next_music_volume() -> void:
+	Settings.set_music_volume(_step_down(Settings.music_volume))
+	_show_options(_options_from, 4)
+
+
+func _next_sound_volume() -> void:
+	Settings.set_sound_volume(_step_down(Settings.sound_volume))
+	_show_options(_options_from, 5)
+
+
+static func _step_down(percent: int) -> int:
+	return 100 if percent <= 0 else maxi(0, (percent - 1) / 25 * 25)
+
+
+func _toggle_mute() -> void:
+	Settings.set_muted(not Settings.muted)
+	_show_options(_options_from, 6)
+
+
 ## Not saved: browsers only allow fullscreen right after a click or tap, so it cannot be restored on load.
 func _toggle_fullscreen() -> void:
 	DisplayServer.window_set_mode(
 			DisplayServer.WINDOW_MODE_WINDOWED if is_fullscreen() else DisplayServer.WINDOW_MODE_FULLSCREEN)
-	_show_options(_options_from, 4)
+	_show_options(_options_from, 7)
 
 
 ## iPhone browsers have no fullscreen for a game canvas, so the option is left out there.
@@ -308,6 +358,23 @@ func _set_screen(next: Screen) -> void:
 	_gore.set_process(next != Screen.PAUSED and next != Screen.OPTIONS)  # a death splatter still lands
 	_pause_button.visible = next == Screen.PLAYING or next == Screen.PAUSED
 	_update_dpad()
+	_update_music(next)
+
+
+## The menu waltz on the title and its options; the rag during a run, a little faster each level,
+## held while paused; silence after the end.
+func _update_music(next: Screen) -> void:
+	var menus := next == Screen.TITLE or (next == Screen.OPTIONS and _options_from == Screen.TITLE)
+	if menus:
+		Sound.pause_music(false)
+		Sound.play_music(&"title")
+	elif next == Screen.PLAYING:
+		Sound.play_music(&"game", minf(1.3, 1.0 + 0.03 * maxi(0, game.level - 1)))
+		Sound.pause_music(false)
+	elif next == Screen.OVER:
+		Sound.stop_music()
+	else:
+		Sound.pause_music(true)
 
 
 func _on_touch_seen() -> void:

@@ -36,7 +36,7 @@ Added on request between steps, so the game can be tried on a tablet.
 - Gore On (default): blood, bones and splats. Off: dust puff and spinning stars, no stains.
   (The user rejected three levels: on/off only.)
 - Spec changes suggested to the user (not made): §11 a Gore on/off option; §2 options list.
-- Still open from spec §2: audio. Start level and view (follow / whole arena) were added with step 5; highscores in step 4. Grid size: dropped, see step 5.
+- Audio: see step 6. Start level and view (follow / whole arena) were added with step 5; highscores in step 4. Grid size: dropped, see step 5.
 
 ## 4. Menu follow-ups — done (waiting for the user's playtest)
 - Gore Off hides all gore; no dust or stars instead.
@@ -76,3 +76,8 @@ Ideas (to pick from):
 
 ## Spec drift to fix
 - Fixed: §1 used to say "via a GitLab pipeline"; it now says GitHub Actions like §14.
+
+## 6. Audio — first try done (waiting for the user's ears)
+- Everything synthesised in GDScript at startup from the "snake-sounds" seed: effects, a menu waltz and an
+  in-game rag, gramophone crackle. Music, Sounds and Mute in the options (spec §10).
+- Listen outside the game: `godot --headless --path . -s tools/export_sounds.gd -- <folder>`.

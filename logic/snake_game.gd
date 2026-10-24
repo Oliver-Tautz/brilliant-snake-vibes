@@ -38,6 +38,7 @@ var last_eaten_kind := 0  # Food of last_eaten, so the gulp can still draw it in
 var last_life_lost := false
 var last_crash := Vector2i.ZERO  # the cell the head tried to enter when a life was lost
 var last_time_up := false
+var last_hop := Vector2i(-1, -1)  # a chicken that started winding up a hop in the last advance()
 var enemy_deaths: Array[Vector2i] = []
 
 var _pending: Array[Vector2i] = []
@@ -212,6 +213,7 @@ func tick() -> void:
 func advance(delta: float) -> void:
 	last_life_lost = false
 	last_time_up = false
+	last_hop = Vector2i(-1, -1)
 	if game_over or level_won:
 		return
 	for enemy in enemies:
@@ -379,6 +381,7 @@ func _advance_hops(delta: float) -> void:
 		var cell := foods[_rng.randi_range(0, foods.size() - 1)]
 		var dir := DIRS[_rng.randi_range(0, 3)]
 		if hop_at(cell) < 0 and _in_bounds(cell + dir) and _is_free(cell + dir):
+			last_hop = cell
 			hops.append({"cell": cell, "dir": dir, "steps": _rng.randi_range(1, 2), "windup": Cfg.HOP_WINDUP,
 					"slide": 0.0})
 	_step_hops(delta)

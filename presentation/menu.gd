@@ -60,6 +60,7 @@ func show_page(heading: String, items: Array, focus := 0, text := "") -> void:
 		var button := TouchButton.new()
 		button.text = item[0]
 		button.focus_mode = Control.FOCUS_ALL
+		button.pressed.connect(Sound.play.bind(&"click", -4.0))
 		button.pressed.connect(item[1])
 		_list.add_child(button)
 	_list.reset_size()

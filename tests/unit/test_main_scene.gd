@@ -12,7 +12,7 @@ var _saved_settings: Array
 func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
 	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true),
-			Settings.start_level, Settings.view_fit]
+			Settings.start_level, Settings.view_fit, Settings.music_volume, Settings.sound_volume, Settings.muted]
 	Settings.path = SETTINGS_PATH
 
 
@@ -23,6 +23,9 @@ func after_all() -> void:
 	Settings.highscores.assign(_saved_settings[3])
 	Settings.start_level = _saved_settings[4]
 	Settings.view_fit = _saved_settings[5]
+	Settings.music_volume = _saved_settings[6]
+	Settings.sound_volume = _saved_settings[7]
+	Settings.muted = _saved_settings[8]
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
@@ -255,10 +258,10 @@ func test_fullscreen_option_shows_the_window_state() -> void:
 	main.show_title()
 	main._menu.press("Options")
 	var label := "Fullscreen: %s" % ("On" if main.is_fullscreen() else "Off")
-	assert_eq(main._menu.buttons()[4].text, label)
+	assert_eq(main._menu.buttons()[7].text, label)
 	main._menu.press(label)  # headless has no real window; this must just not fail
 	assert_eq(main.screen, main.Screen.OPTIONS)
-	assert_true(main._menu.buttons()[4].has_focus())
+	assert_true(main._menu.buttons()[7].has_focus())
 
 
 func test_start_level_option_sets_where_a_run_begins() -> void:
@@ -855,3 +858,49 @@ func test_whole_arena_view_centres_one_axis_and_follows_the_other() -> void:
 	assert_eq(camera.position.y, 10.0 * View.CELL / 2.0)
 	var half_width := main.get_viewport_rect().size.x / camera.zoom.x / 2.0
 	assert_eq(camera.position.x, maxf(half_width, View.center(main.game.body[0]).x))
+
+
+func test_music_follows_the_screens() -> void:
+	main.show_title()
+	assert_eq(Sound.music_name(), &"title")
+	main.start_run()
+	assert_eq(Sound.music_name(), &"game")
+	main._handle_key(KEY_P)
+	assert_true(Sound.is_music_paused())
+	main._handle_key(KEY_P)
+	assert_false(Sound.is_music_paused())
+	main.game.game_over = true
+	main._process(0.0)
+	assert_eq(Sound.music_name(), &"")
+
+
+func test_game_music_speeds_up_with_the_level() -> void:
+	main.start_run()
+	main.game.level_won = true
+	main._process(0.0)
+	main._menu.press("Next level")
+	assert_almost_eq(Sound._music_pitch, 1.03, 0.001)
+
+
+func test_volume_and_mute_options() -> void:
+	main.show_title()
+	main._menu.press("Options")
+	main._menu.press("Music: 100%")
+	assert_eq(Settings.music_volume, 75)
+	assert_true(main._menu.buttons()[4].has_focus())
+	main._menu.press("Sounds: 100%")
+	main._menu.press("Sounds: 75%")
+	main._menu.press("Sounds: 50%")
+	main._menu.press("Sounds: 25%")
+	assert_eq(Settings.sound_volume, 0)
+	main._menu.press("Sounds: 0%")
+	assert_eq(Settings.sound_volume, 100)  # round again
+	main._menu.press("Mute: Off")
+	assert_true(Settings.muted)
+
+
+func test_last_ten_seconds_tick() -> void:
+	main.start_run()
+	main.game.level_time = main.Cfg.LEVEL_SECONDS - 9.5
+	main._process(0.0)
+	assert_eq(main._last_tick, 10)

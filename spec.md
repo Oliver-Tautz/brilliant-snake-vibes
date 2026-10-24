@@ -111,6 +111,10 @@ As many as feasible, all in the hand-drawn style:
 ## 10. Audio
 - Music (menu and in-game), sound effects, menu sounds.
 - Separate volume sliders for music and SFX, mute toggle.
+- Style: 1920s cartoon and old-record horror: out-of-tune toy piano, stride bass, slide whistles, a "wah-wah" trombone for losing a life, gramophone crackle over the music.
+- Music: a slow minor waltz for the menus, a fast ragtime loop in game that speeds up a little each level.
+- Sound effects: eating (gulp), chicken squawk before a hop, gore (crunch and splat, only with Gore on), crash, enemy death, life lost, level cleared (fanfare), the last 10 s of the level timer (ticks) and time up (gong), menu clicks.
+- All sound is synthesised by code at startup (§17); parameters follow the divine_inspiration seed for "snake-sounds".
 
 ## 11. Visual Style
 Violent 1920s cartoon horror: hand-drawn, black and white, with sparse color accents.
@@ -202,6 +206,7 @@ Target mix: the drawing and animation quality of the 1920s references, with the 
 Assets are drawn as code (free, no external art or music dependencies):
 - SVG written as markup, or a small Python or Godot script that outputs PNGs.
 - Godot's own shapes, particles and shaders.
+- Sound synthesised in GDScript (oscillators, noise, envelopes) into AudioStreamWAV at startup.
 - Best fit: simple, geometric or pixel-style art, UI, tiles and effects.
 - Generator scripts are kept in the repo so assets are reproducible and can be tweaked.
 - Exception: one bundled open-licence (SIL OFL) serif font, since browsers have no system fonts. Credited in CREDITS.md.

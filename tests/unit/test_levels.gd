@@ -356,3 +356,12 @@ func test_biting_further_down_the_body_still_costs_a_life() -> void:
 	game.tick()
 	assert_true(foe.alive)
 	assert_true(game.last_life_lost)
+
+
+func test_a_new_hop_is_reported_for_its_squawk() -> void:
+	for i in 200:
+		game.advance(0.1)
+		if game.last_hop.x >= 0:
+			break
+	assert_gte(game.last_hop.x, 0)
+	assert_gte(game.hop_at(game.last_hop), 0)

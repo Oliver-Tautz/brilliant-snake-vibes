@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 Settings="*res://presentation/settings.gd"
+Sound="*res://presentation/sound.gd"
 
 [editor_plugins]
 
