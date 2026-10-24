@@ -3,7 +3,7 @@
 Status: Draft v0.1. Items marked **TBD** need a decision.
 
 ## 1. Goal
-A browser and phone Snake game with a hand-drawn horror look. The player hunts animals on a configurable, potentially huge grid. Delivered as a Godot web build to GitHub Pages via a GitLab pipeline.
+A browser and phone Snake game with a hand-drawn horror look. The player hunts animals on a configurable, potentially huge grid. Delivered as a Godot web build to GitHub Pages via GitHub Actions.
 
 ## 2. Game Loop
 1. Main menu: Play, Options, link to GitHub.
@@ -134,7 +134,9 @@ Target mix: the drawing and animation quality of the 1920s references, with the 
 
 ## 14. Delivery
 - Repo hosted on GitHub; GitHub Pages is the publishing target.
-- GitHub Actions on every push: run the unit tests and export the Godot web build. Pushes to main also deploy the build to GitHub Pages.
+- GitHub Actions on every push: run the unit tests and export the Godot web build.
+- Every push is published: `main` to the site root, other branches to `/branch/<name>/`, tags `v*` to `/v/<version>/` (kept). Deleting a branch removes its build.
+- The game shows which build it is (version tag, or branch and commit).
 - Build fails if the tests or the export fail.
 
 ## 15. Open Questions
