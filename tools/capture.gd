@@ -1,7 +1,8 @@
 ## Renders the main scene in a staged state and saves a screenshot.
 ## Usage: godot --path . -s tools/capture.gd -- <out.png> [scenario]
 ## Scenarios: title, options, start, paused (pause menu), play (runs live), corners (long snake with
-## turns, mid-tick), eat (gore), edge (snake near the top-left wall), touch (corners with the D-pad).
+## turns, mid-tick), eat (gore), edge (snake near the top-left wall), touch (corners with the D-pad),
+## enemies (the three enemy snakes, big, hopping and coloured chickens).
 ## Optional third arg: a WallStyle index to override the seed.
 extends SceneTree
 
@@ -55,10 +56,14 @@ func _stage() -> void:
 	if _scenario == "play":  # unstaged: the game simply runs until the capture frame
 		_main.game.request_turn(Vector2i.UP)
 		return
+	if _scenario == "enemies":
+		_stage_enemies()
+		return
 	_main._show_pause()  # frozen; the card is hidden again unless this is "paused"
-	var game: SnakeGame = _main.game
 	if _scenario == "start" or _scenario == "paused":
 		return
+	_main.set_game(SnakeGame.new(100, 100, 1))  # free play without enemies, on a board big enough to stage
+	var game: SnakeGame = _main.game
 	# A long snake with several corners around the centre (or near the top-left wall for "edge").
 	var cells: Array[Vector2i] = []
 	var c := Vector2i(14, 5) if _scenario == "edge" else Vector2i(50, 50)
@@ -84,3 +89,26 @@ func _stage() -> void:
 	if _scenario == "eat":
 		_main.play_eat_effect(c + Vector2i(1, 0))
 		_main.play_eat_effect(c + Vector2i(-3, 2))
+
+
+## The three enemy snakes around the player, with chickens of every kind and one winding up a hop.
+func _stage_enemies() -> void:
+	var enemy_script := preload("res://logic/enemy_snake.gd")
+	var game := SnakeGame.new(40, 30, 3)
+	game.set_food([])
+	game.set_body([Vector2i(20, 15), Vector2i(19, 15), Vector2i(18, 15), Vector2i(17, 15), Vector2i(16, 15)])
+	var layouts := [[Vector2i(14, 10), Vector2i.RIGHT], [Vector2i(27, 19), Vector2i.LEFT], [Vector2i(26, 11), Vector2i.UP]]
+	for kind in 3:
+		var cells: Array[Vector2i] = []
+		for i in 6:
+			cells.append(layouts[kind][0] - layouts[kind][1] * i)
+		game.enemies.append(enemy_script.new(kind, cells, layouts[kind][1], 1.0))
+	game.set_food([Vector2i(23, 15), Vector2i(19, 12), Vector2i(12, 17), Vector2i(22, 18), Vector2i(17, 18),
+			Vector2i(29, 14)])
+	game._food_cells[game._index(Vector2i(19, 12))] = SnakeGame.Food.BIG
+	game._food_cells[game._index(Vector2i(12, 17))] = SnakeGame.Food.GREEN
+	game._food_cells[game._index(Vector2i(22, 18))] = SnakeGame.Food.PURPLE
+	game._food_cells[game._index(Vector2i(17, 18))] = SnakeGame.Food.BLACK
+	game.hops.append({"cell": Vector2i(29, 14), "dir": Vector2i.UP, "steps": 1, "windup": 1.0, "slide": 0.0})
+	_main.set_game(game)
+	_main._show_pause()

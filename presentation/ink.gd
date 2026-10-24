@@ -3,6 +3,10 @@ class_name Ink
 extends RefCounted
 
 const INK := Color(0.05, 0.05, 0.05)
+# Muted, slightly off accents (spec §11): big chickens, and the enemy snakes (green, purple, black)
+# together with the chickens they leave behind.
+const ORANGE := Color(0.74, 0.5, 0.28)
+const SNAKE_COLORS: Array[Color] = [Color(0.47, 0.54, 0.3), Color(0.47, 0.34, 0.5), Color(0.16, 0.16, 0.15)]
 static var PAPER := Color(Art.paper_tone, Art.paper_tone, Art.paper_tone * 0.99)  # seed[23]
 
 # All procedural wobble and variation is seeded from divine_inspiration("snake-art").

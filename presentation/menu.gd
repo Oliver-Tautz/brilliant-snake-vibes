@@ -29,6 +29,7 @@ const PADDING := 34.0
 const ROW_GAP := 10
 
 var _heading := Label.new()
+var _body := Label.new()  # optional smaller text under the heading, e.g. the highscore table
 var _list := VBoxContainer.new()
 
 
@@ -39,14 +40,19 @@ func _ready() -> void:
 	_list.position = Vector2(PADDING, PADDING)
 	_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_heading.add_theme_font_size_override("font_size", 30)
+	_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_body.add_theme_font_size_override("font_size", 19)
 	_list.add_child(_heading)
+	_list.add_child(_body)
 	add_child(_list)
 
 
-## Shows a page: a heading and one button per [text, callable] item. `focus` is the button that gets
-## keyboard focus, so a page rebuilt after a change keeps its place.
-func show_page(heading: String, items: Array, focus := 0) -> void:
+## Shows a page: a heading, optional body text and one button per [text, callable] item. `focus` is
+## the button that gets keyboard focus, so a page rebuilt after a change keeps its place.
+func show_page(heading: String, items: Array, focus := 0, text := "") -> void:
 	_heading.text = heading
+	_body.text = text
+	_body.visible = text != ""
 	for button in buttons():
 		_list.remove_child(button)
 		button.queue_free()
@@ -77,6 +83,10 @@ func focused_index() -> int:
 
 func heading() -> String:
 	return _heading.text
+
+
+func body() -> String:
+	return _body.text
 
 
 func buttons() -> Array[Button]:

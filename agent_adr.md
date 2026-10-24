@@ -325,3 +325,40 @@ Append-only. Format is defined in AGENTS.md.
 - Source: reviewer findings; user answers
 - Revisit if: playtests change any of these numbers.
 - Left as TBD with a suggestion: the order of floor, level bonus and multipliers; the player's length and speed on a timer retry.
+
+## 2026-10-24 — Level bonus scales with the base points
+- Decision: the level bonus is round(level x 0.33 x base points) per category (level 3: chicken +1, big chicken +5, enemy +20). The enemy's time decay (1 per 10 s, never below 5) is unchanged and applied after the bonus. Multipliers are applied last (still a suggestion).
+- Decided by: user (formula, decay unchanged); claude (decay after the bonus, multipliers last)
+- Why: the user's correction of round(level x 0.33), which added the same flat amount to every category.
+- Source: user message
+- Revisit if: scores grow too fast at high levels.
+
+## 2026-10-24 — Building the gameplay plan: numbers and choices
+- Decision: spec TBDs filled with these values, all in `logic/game_config.gd`:
+  - Arena: level 1 is 60 x 40, minimum 16 x 12; the level timer is 120 s.
+  - Enemies: start length 5; seconds per move 0.3 / 0.2 / 0.13 (anaconda / cobra / mamba), x0.93 per level; flee weights 1 / 3 / 6 within 6 cells; flood fill capped at 30.
+  - Chickens: one per 80 cells; big chickens 1 in 8 and +3 growth; hops start about 0.6 per second across the arena, wind up 0.5 s, move 0.3 s per cell, at most 3 at once; a dead enemy leaves one chicken per 3 segments.
+  - Chicken refill is 0.4 s, not the spec's suggested 1 s: in simulation, three enemies ate the arena down to 9 of 30 chickens in a minute at 1 s.
+  - Every enemy death scores for the player, including one with no free move.
+  - A new level and a timer retry put the player back at the start length and base speed (the spec's suggestions).
+- Drawing:
+  - All prey are drawn as chicks now, because the spec says chickens. The seed's other species (seed[10], seed[11]) stay in the code for the later tiers.
+  - Enemies get muted green / purple / near-black hoses (1.2 / 1.0 / 0.85 x body width) with their own heads: a broad anaconda head, a cobra hood with eye-spots, and a coffin-shaped mamba head with a pale rim. Big chickens are muted orange.
+  - The player's body width is back to "in between" (seed[3] maps to 0.45–0.62 of a cell).
+- Flow:
+  - Level cleared and time up each show a card with one button (Next level / Continue).
+  - The HUD adds level, time and foes.
+  - Gore Off shows nothing at all.
+  - The title card has Gore and Highscores; Gore also stays in Options so it can be switched from the pause menu.
+  - `main.set_game()` lets tests and tools stage their own board.
+- Decided by: user (the features, gore off showing nothing, snake width "in between", gore on the title, highscores); claude (the numbers, drawing and flow above); worker (the highscore storage format, from my brief)
+- Why: build the spec's gameplay plan with as little code as possible.
+- Source: spec §4–§8, §11; docs/roadmap.md steps 4 and 5; simulation in the session
+- Revisit if: playtests find the enemies too long too fast (in simulation they reach 30–58 segments in a minute, which makes head-on kills hard; trapping always works).
+
+## 2026-10-24 — Gameplay review findings
+- Decision: fixed the review findings: a respawn or new level no longer slides in from the old snake; enemy drawing has no per-frame arrays; eaten chickens keep their colour during the gulp; the stale gore comment is gone. Left as they are: a head-on kill also feeds the player the chicken left on the enemy's head cell (a small bonus for a risky move), and a longer enemy waits next to an invulnerable player's head (it reads as lurking).
+- Decided by: reviewer (findings); claude (fixes, the two left as they are)
+- Why: visual glitches and hot-path allocations.
+- Source: reviewer findings
+- Revisit if: the playtest shows lurking enemies are unfair.

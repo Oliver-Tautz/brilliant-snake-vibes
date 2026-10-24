@@ -2,15 +2,14 @@
 extends Node2D
 
 const View := preload("res://presentation/view_config.gd")
-const GRID_W := 100
-const GRID_H := 100
+const Cfg := preload("res://logic/game_config.gd")
 const MAX_TICKS_PER_FRAME := 5
 ## Old Standard TT (SIL OFL 1.1), bundled so the web build gets the same period serif.
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 const BuildInfo := preload("res://presentation/build_info.gd")
 const GITHUB := "https://github.com/Oliver-Tautz/brilliant-snake-vibes"
 
-enum Screen { TITLE, PLAYING, PAUSED, OPTIONS, OVER }
+enum Screen { TITLE, PLAYING, PAUSED, OPTIONS, OVER, BREAK }  # BREAK: level cleared or time up
 
 var game: SnakeGame
 var screen := Screen.TITLE
@@ -26,6 +25,7 @@ var _pending_eat := Vector2i(-1, -1)  # eaten prey, burst once the drawn head re
 var _hud_score := -1
 var _hud_lives := -1
 var _hud_length := -1
+var _hud_extra := -1  # level, seconds left and foes left, packed into one number
 var _options_from := Screen.TITLE  # where Back in the options leads
 var _touch_seen := DisplayServer.is_touchscreen_available()
 
@@ -44,7 +44,6 @@ func _ready() -> void:
 	for label in [_status, $HUD/Build]:
 		label.add_theme_font_override("font", SERIF)
 	$HUD/Build.text = BuildInfo.LABEL
-	_floor.size = Vector2(GRID_W, GRID_H) * View.CELL
 	_camera.zoom = Vector2(View.ZOOM, View.ZOOM)
 	var film := ($Film/Screen as ColorRect).material as ShaderMaterial
 	film.set_shader_parameter("grain", Art.film_grain)  # seed[16]
@@ -74,8 +73,15 @@ func _process(delta: float) -> void:
 			_play_events(head_before)
 			ticks += 1
 		_accumulator = minf(_accumulator, game.tick_interval())
+		if not game.game_over:
+			game.advance(delta)
+			_play_clock_events()
 		if game.game_over:
 			_show_over()
+		elif game.level_won:
+			_show_break("~ LEVEL %d CLEARED ~" % game.level, "Next level", _next_level)
+		elif game.last_time_up:
+			_show_break("~ TIME'S UP ~\nThe level starts over", "Continue", resume)
 	_world.t = clampf(_accumulator / game.tick_interval(), 0.0, 1.0) if game.last_tick_moved else 1.0
 	if _pending_eat.x >= 0 and _world.t >= 0.85:
 		_burst_pending_eat()
@@ -95,9 +101,24 @@ func _play_events(head_before: Vector2i) -> void:
 	if game.last_eaten.x >= 0:
 		_pending_eat = game.last_eaten
 		_world.dying_prey = _pending_eat
+		_world.dying_kind = game.last_eaten_kind
 	if game.last_life_lost:
 		var crash := (View.center(head_before) + View.center(game.last_crash)) / 2.0
 		_gore.burst(crash, 60, 420.0, 5)
+		_shake = View.SHAKE_TIME
+
+
+## Gore for what happened on the enemies' and the level's own clock: enemy deaths (also those from
+## the player's ticks), the player bitten or out of time.
+func _play_clock_events() -> void:
+	for cell in game.enemy_deaths:
+		_gore.burst(View.center(cell), 50, 380.0, 4)
+		_shake = View.SHAKE_TIME * 0.6
+	game.enemy_deaths.clear()
+	if game.last_time_up:
+		_on_level_started()
+	elif game.last_life_lost:
+		_gore.burst(View.center(game.last_crash), 60, 420.0, 5)
 		_shake = View.SHAKE_TIME
 
 
@@ -133,13 +154,37 @@ func _turn(dir: Vector2i) -> void:
 		game.request_turn(dir)
 
 
-func show_title() -> void:
+func show_title(focus := 0) -> void:
 	_set_screen(Screen.TITLE)
 	_menu.show_page("~ BRILLIANT SNAKE VIBES ~", [
 		["Play", start_run],
+		["Gore: %s" % ("On" if Settings.gore else "Off"), _toggle_gore_on_title],
+		["Highscores", _show_highscores],
 		["Options", _show_options.bind(Screen.TITLE)],
 		["GitHub", _open_github],
-	])
+	], focus)
+
+
+func _toggle_gore_on_title() -> void:
+	Settings.set_gore(not Settings.gore)
+	show_title(1)
+
+
+func _show_highscores() -> void:
+	_set_screen(Screen.TITLE)
+	_menu.show_page("~ HIGHSCORES ~", [["Back", show_title.bind(2)]], 0, score_table())
+
+
+## The highscore table as lines of text; `mark` is the rank to flag as new.
+func score_table(mark := -1) -> String:
+	if Settings.highscores.is_empty():
+		return "No scores yet"
+	var lines: PackedStringArray = []
+	for i in Settings.highscores.size():
+		var entry: Dictionary = Settings.highscores[i]
+		lines.append("%d.   %d   level %d   %s%s" % [i + 1, entry.score, entry.level, entry.date,
+				"   ~ new ~" if i == mark else ""])
+	return "\n".join(lines)
 
 
 ## A fresh run, straight into play.
@@ -165,10 +210,23 @@ func _show_pause() -> void:
 
 func _show_over() -> void:
 	_set_screen(Screen.OVER)
-	_menu.show_page("~ THE END ~\nScore  %d" % game.score, [
+	var rank: int = Settings.add_score(game.score, game.level)
+	_menu.show_page("~ THE END ~\nScore  %d     Level  %d" % [game.score, game.level], [
 		["Restart", start_run],
 		["Menu", show_title],
-	])
+	], 0, score_table(rank))
+
+
+## Level cleared or time up: a card with one button that carries on.
+func _show_break(heading: String, button: String, action: Callable) -> void:
+	_set_screen(Screen.BREAK)
+	_menu.show_page(heading + "\nScore  %d     Lives  %d" % [game.score, game.lives], [[button, action]])
+
+
+func _next_level() -> void:
+	game.start_level(game.level + 1)
+	_on_level_started()
+	resume()
 
 
 func _show_options(from: Screen, focus := 0) -> void:
@@ -254,9 +312,23 @@ func _apply_settings() -> void:
 	_update_dpad()
 
 
+## A new run starts at level 1.
 func _new_game() -> void:
-	game = SnakeGame.new(GRID_W, GRID_H, Time.get_ticks_usec())
+	var fresh := SnakeGame.new(Cfg.ARENA.x, Cfg.ARENA.y, Time.get_ticks_usec())
+	fresh.start_level(1)
+	set_game(fresh)
+
+
+## Shows this game; also used by tests and tools to stage a game of their own.
+func set_game(next: SnakeGame) -> void:
+	game = next
 	_world.game = game
+	_on_level_started()
+
+
+## A new or restarted level: the floor fits the arena, old gore goes, the view jumps to the snake.
+func _on_level_started() -> void:
+	_floor.size = Vector2(game.width, game.height) * View.CELL
 	_gore.clear()
 	_pending_eat = Vector2i(-1, -1)
 	_world.dying_prey = _pending_eat
@@ -268,12 +340,19 @@ func _new_game() -> void:
 
 func _update_hud() -> void:
 	var length := game.body.size()
-	if game.score == _hud_score and game.lives == _hud_lives and length == _hud_length:
+	var extra := game.level * 100000 + int(ceilf(game.time_left())) * 10 + game.enemies_alive()
+	if game.score == _hud_score and game.lives == _hud_lives and length == _hud_length and extra == _hud_extra:
 		return
 	_hud_score = game.score
 	_hud_lives = game.lives
 	_hud_length = length
-	_status.text = "SCORE  %d     LIVES  %d     LENGTH  %d" % [game.score, game.lives, length]
+	_hud_extra = extra
+	var text := "SCORE  %d     LIVES  %d     LENGTH  %d" % [game.score, game.lives, length]
+	if game.level > 0:
+		var seconds := int(ceilf(game.time_left()))
+		text += "     LEVEL  %d     TIME  %d:%02d     FOES  %d" % [game.level, seconds / 60, seconds % 60,
+				game.enemies_alive()]
+	_status.text = text
 
 
 func _visible_rect() -> Rect2:

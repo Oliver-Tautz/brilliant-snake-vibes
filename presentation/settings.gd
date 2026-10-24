@@ -7,7 +7,7 @@ const PATH := "user://settings.cfg"
 const MAX_SCORES := 10
 
 var path := PATH  ## overridden by tests
-var gore := true  ## blood and bones; off swaps them for a dust puff and stars
+var gore := true  ## blood, bones and stains; off shows no gore at all
 var show_arrows := true  ## on-screen D-pad on touch screens
 var highscores: Array[Dictionary] = []  ## best first: {"score", "level", "date"}
 

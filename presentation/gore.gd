@@ -1,6 +1,6 @@
 ## Pooled cartoon gore: blood droplets, flying bones, and floor splats that fade.
-## Fixed-size pools, so spawning and drawing never allocate. With the gore setting off, the same
-## bursts are a puff of grey dust with spinning stars and leave no stains.
+## Fixed-size pools, so spawning and drawing never allocate. With the gore setting off nothing is
+## shown at all (spec §11).
 extends Node2D
 
 const MAX_DROPS := 256
@@ -10,9 +10,6 @@ const SPLAT_LIFETIME := 25.0
 const BONE_LIFETIME := 3.0
 static var BLOOD: Color = Art.blood  # seed[22]
 static var BLOOD_DARK: Color = Art.blood.darkened(0.35)
-const DUST := Color(0.62, 0.62, 0.6)
-const STARS := 3  # stars per puff when gore is off
-
 var gore := true
 
 var _drop_pos := PackedVector2Array()
@@ -59,16 +56,13 @@ func set_gore(on: bool) -> void:
 
 
 ## A spray of blood (and optionally bones) bursting out of `at`. The amount is scaled by the seed's
-## gore multiplier (seed[14]) and extra bones (seed[15]). With gore off it is a small dust puff and
-## stars instead.
+## gore multiplier (seed[14]) and extra bones (seed[15]). Nothing happens with gore off.
 func burst(at: Vector2, drops: int, force: float, bones: int) -> void:
+	if not gore:
+		return
 	drops = int(drops * Art.gore_amount)
 	if bones > 0:
 		bones += Art.extra_bones
-	if not gore:
-		drops /= 3
-		force *= 0.4
-		bones = STARS
 	for i in drops:
 		if _drop_count >= MAX_DROPS:
 			break
@@ -87,8 +81,7 @@ func burst(at: Vector2, drops: int, force: float, bones: int) -> void:
 		_bone_spin[_bone_count] = randf_range(-14.0, 14.0)
 		_bone_age[_bone_count] = 0.0
 		_bone_count += 1
-	if gore:
-		splat(at, randf_range(10.0, 15.0))
+	splat(at, randf_range(10.0, 15.0))
 
 
 ## A blood stain on the floor. Oldest stains are reused once the pool is full.
@@ -125,8 +118,7 @@ func _process(delta: float) -> void:
 	while i < _drop_count:
 		_drop_life[i] -= delta
 		if _drop_life[i] <= 0.0:
-			if gore:
-				splat(_drop_pos[i], _drop_size[i] * 1.5)
+			splat(_drop_pos[i], _drop_size[i] * 1.5)
 			_drop_count -= 1
 			_drop_pos[i] = _drop_pos[_drop_count]
 			_drop_vel[i] = _drop_vel[_drop_count]
@@ -176,18 +168,7 @@ func _draw() -> void:
 	for k in _drop_count:
 		var tail := _drop_vel[k].limit_length(_drop_size[k] * 40.0) * 0.012  # keep the dots touching
 		for j in 3:
-			Ink.disc(self, _drop_pos[k] - tail * j, _drop_size[k] * (0.5 - 0.1 * j), BLOOD if gore else DUST)
+			Ink.disc(self, _drop_pos[k] - tail * j, _drop_size[k] * (0.5 - 0.1 * j), BLOOD)
 	for k in _bone_count:
 		var alpha := clampf((BONE_LIFETIME - _bone_age[k]) / 0.5, 0.0, 1.0)
-		if not gore:
-			_star(_bone_pos[k], _bone_rot[k], alpha)
-		else:
-			Ink.bone(self, _bone_pos[k], _bone_rot[k], 10.0, alpha)
-
-
-## A cartoon "seeing stars" sparkle: two crossed ink diamonds, spinning.
-func _star(at: Vector2, angle: float, alpha: float) -> void:
-	draw_set_transform(at, angle, Vector2.ONE)
-	Ink.diamond(self, Vector2.ZERO, Vector2(2.0, 8.0), Color(Ink.INK, alpha))
-	Ink.diamond(self, Vector2.ZERO, Vector2(8.0, 2.0), Color(Ink.INK, alpha))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		Ink.bone(self, _bone_pos[k], _bone_rot[k], 10.0, alpha)

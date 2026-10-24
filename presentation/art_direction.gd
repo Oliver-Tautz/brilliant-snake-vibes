@@ -20,7 +20,7 @@ enum OrnamentStyle { DOTS, DIAMONDS, SCROLLS }
 static var floor_pattern: int = pick(0, 4)  # seed[0]
 static var floor_contrast: float = lerpf(0.03, 0.10, amount(1))  # seed[1]
 static var skin: int = pick(2, 4)  # seed[2]
-static var body_width: float = lerpf(0.32, 0.45, amount(3))  # seed[3], fraction of a cell; leaves a gap between rows
+static var body_width: float = lerpf(0.45, 0.62, amount(3))  # seed[3], fraction of a cell; rows almost touch
 static var head: int = pick(4, 3)  # seed[4]
 static var fang_length: float = lerpf(0.3, 0.6, amount(5))  # seed[5], fraction of head radius
 static var eye_size: float = lerpf(0.3, 0.5, amount(6))  # seed[6], fraction of head radius

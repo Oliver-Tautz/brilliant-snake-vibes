@@ -11,7 +11,7 @@ var _saved_settings: Array
 
 func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
-	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows]
+	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true)]
 	Settings.path = SETTINGS_PATH
 
 
@@ -19,22 +19,107 @@ func after_all() -> void:
 	Settings.path = _saved_settings[0]
 	Settings.gore = _saved_settings[1]
 	Settings.show_arrows = _saved_settings[2]
+	Settings.highscores.assign(_saved_settings[3])
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
 func before_each() -> void:
 	Settings.gore = true
 	Settings.show_arrows = true
+	Settings.highscores.clear()
 	main = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
 	world = main.get_node("World")
 	main.start_run()  # most tests are about a run; the title screen has its own tests
+	main.set_game(SnakeGame.new(100, 100, 1))  # free play without enemies, so tests control the board
 
 
-func test_scene_starts_a_game() -> void:
-	assert_not_null(main.game)
-	assert_eq(main.game.width, main.GRID_W)
+func test_a_run_starts_at_level_one_with_three_enemies() -> void:
+	main.start_run()
+	assert_eq(main.game.level, 1)
+	assert_eq(main.game.enemies_alive(), 3)
 	assert_eq(main.game.body.size(), 3)
+	assert_eq(main.get_node("Floor").size, Vector2(main.Cfg.ARENA) * View.CELL)
+	main._process(0.0)
+	assert_string_contains(main._status.text, "LEVEL  1")
+	assert_string_contains(main._status.text, "TIME  2:00")
+	assert_string_contains(main._status.text, "FOES  3")
+
+
+func test_enemies_move_during_a_run() -> void:
+	main.start_run()
+	var head: Vector2i = main.game.enemies[2].body[0]
+	for i in 10:
+		main._process(0.05)
+	assert_ne(main.game.enemies[2].body[0], head)
+
+
+func test_enemy_death_bursts_and_clears_the_event() -> void:
+	main.game.enemy_deaths.append(Vector2i(10, 10))
+	main._play_clock_events()
+	assert_gt(main.get_node("Gore").active_count(), 0)
+	assert_gt(main._shake, 0.0)
+	assert_eq(main.game.enemy_deaths.size(), 0)
+
+
+func test_cleared_level_shows_a_card_and_moves_on_to_a_smaller_arena() -> void:
+	main.start_run()
+	main.game.score = 77
+	main.game.level_won = true
+	main._process(0.0)
+	assert_eq(main.screen, main.Screen.BREAK)
+	assert_string_contains(main._menu.heading(), "LEVEL 1 CLEARED")
+	assert_false(main.get_node("HUD/Pause").visible)
+	main._menu.press("Next level")
+	assert_eq(main.screen, main.Screen.PLAYING)
+	assert_eq(main.game.level, 2)
+	assert_eq(main.game.score, 77)
+	assert_eq(main.get_node("Floor").size, Vector2(SnakeGame.arena_size(2)) * View.CELL)
+
+
+func test_time_up_shows_a_card_and_the_level_restarts() -> void:
+	main.start_run()
+	main.game.level_time = main.Cfg.LEVEL_SECONDS - 0.01
+	main._process(0.05)
+	assert_eq(main.screen, main.Screen.BREAK)
+	assert_string_contains(main._menu.heading(), "TIME'S UP")
+	assert_eq(main.game.lives, main.Cfg.LIVES - 1)
+	main._menu.press("Continue")
+	assert_eq(main.screen, main.Screen.PLAYING)
+	assert_almost_eq(main.game.time_left(), main.Cfg.LEVEL_SECONDS, 0.01)
+
+
+func test_game_over_records_the_score_and_marks_it() -> void:
+	Settings.add_score(500, 4, "2026-01-01")
+	main.game.score = 120
+	main.game.game_over = true
+	main._process(0.0)
+	assert_eq(Settings.highscores.size(), 2)
+	assert_string_contains(main._menu.body(), "500")
+	assert_string_contains(main._menu.body(), "2.   120   level 0")
+	assert_string_contains(main._menu.body(), "new")
+
+
+func test_highscores_page_from_the_title() -> void:
+	main.show_title()
+	main._menu.press("Highscores")
+	assert_string_contains(main._menu.heading(), "HIGHSCORES")
+	assert_eq(main._menu.body(), "No scores yet")
+	Settings.add_score(90, 2, "2026-02-02")
+	main._menu.press("Back")
+	main._menu.press("Highscores")
+	assert_string_contains(main._menu.body(), "1.   90   level 2   2026-02-02")
+	main._menu.press("Back")
+	assert_eq(main.screen, main.Screen.TITLE)
+	assert_true(main._menu.buttons()[2].has_focus())
+
+
+func test_gore_switch_is_on_the_title() -> void:
+	main.show_title()
+	main._menu.press("Gore: On")
+	assert_false(Settings.gore)
+	assert_eq(main._menu.buttons()[1].text, "Gore: Off")
+	assert_true(main._menu.buttons()[1].has_focus())
 
 
 func test_arrow_key_queues_turn() -> void:
@@ -92,7 +177,7 @@ func test_title_has_play_options_and_github() -> void:
 	var texts: Array[String] = []
 	for button in main._menu.buttons():
 		texts.append(button.text)
-	assert_eq(texts, ["Play", "Options", "GitHub"] as Array[String])
+	assert_eq(texts, ["Play", "Gore: On", "Highscores", "Options", "GitHub"] as Array[String])
 	assert_true(main._menu.buttons()[0].has_focus())  # keyboard players can press Enter right away
 
 
@@ -632,18 +717,12 @@ func test_build_label_shows_which_build_this_is() -> void:
 	assert_ne(label.text, "")
 
 
-func test_gore_off_is_dust_and_stars_without_stains() -> void:
+func test_gore_off_shows_nothing() -> void:
 	var gore = main.get_node("Gore")
 	gore.set_gore(false)
-	gore.burst(Vector2(100, 100), 20, 200.0, 0)
-	assert_eq(gore._bone_count, gore.STARS)
-	assert_eq(gore._splat_count, 0)
-	for i in 10:
-		gore._process(0.1)
-	assert_eq(gore._splat_count, 0)  # landing dust leaves no stain
-	gore.queue_redraw()
-	await wait_process_frames(2)  # stars draw
-	assert_true(is_instance_valid(gore))
+	gore.burst(Vector2(100, 100), 20, 200.0, 3)
+	assert_eq(gore.active_count(), 0)
+	assert_false(gore.is_active())
 
 
 func test_switching_gore_off_wipes_the_blood() -> void:

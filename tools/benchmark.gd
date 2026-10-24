@@ -75,6 +75,7 @@ func _process(_delta: float) -> bool:
 func _stage() -> void:
 	_main.set_process(false)  # the benchmark drives redraws itself; the game does not tick
 	_main.get_node("HUD/Menu").visible = false
+	_main.set_game(SnakeGame.new(100, 100, 1))
 	var game: SnakeGame = _main.game
 	var cells: Array[Vector2i] = []
 	for row in 12:

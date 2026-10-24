@@ -58,14 +58,17 @@ func test_buffered_turns_apply_in_order() -> void:
 	assert_eq(game.body[0], Vector2i(4, 4))
 
 
-func test_eating_grows_scores_and_respawns_food() -> void:
+func test_eating_grows_scores_and_refills_after_a_delay() -> void:
 	game.set_food([Vector2i(6, 5)])
 	game.tick()
 	assert_eq(game.body.size(), Cfg.START_LENGTH + 1)
-	assert_eq(game.score, Cfg.FOOD_SCORE)
+	assert_eq(game.score, Cfg.CHICKEN_POINTS)
 	assert_eq(game.foods_eaten, 1)
-	assert_false(game.foods.has(Vector2i(6, 5)))
-	assert_eq(game.foods.size(), 1)  # eaten food is replaced
+	assert_eq(game.foods.size(), 0)  # not instantly
+	game.advance(Cfg.REFILL_DELAY * 0.5)
+	assert_eq(game.foods.size(), 0)
+	game.advance(Cfg.REFILL_DELAY * 0.6)
+	assert_eq(game.foods.size(), 1)
 	assert_false(game.body.has(game.foods[0]))
 
 

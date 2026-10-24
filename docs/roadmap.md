@@ -38,13 +38,13 @@ Added on request between steps, so the game can be tried on a tablet.
 - Spec changes suggested to the user (not made): §11 a Gore on/off option; §2 options list.
 - Still open from spec §2/§4/§5/§8: start level, view (follow / fit), audio, highscores (step 4). Grid size: dropped, see step 5.
 
-## 4. Menu follow-ups — agreed
+## 4. Menu follow-ups — done (waiting for the user's playtest)
 - Gore Off hides all gore; no dust or stars instead.
 - The player's snake gets fatter again ("in between": clearly fatter, rows almost touch but keep their outlines).
 - Main menu: Gore On / Off moves to the top level; a Highscores page is added.
 - Highscores (top 10: score, level, date) saved locally; shown on the game-over card with the new entry marked (spec §8).
 
-## 5. New gameplay — agreed, written into spec §1–§6b, §8, §11, §15
+## 5. New gameplay — done (waiting for the user's playtest), written into spec §1–§6b, §8, §11, §15
 Replaces the earlier "frenzier gameplay" step; that step's ideas stay below for later.
 1. Chickens refill one at a time on random free cells when below the target count (§6).
 2. Big chickens, slightly orange, worth more and grow more (§6, §11).
@@ -54,8 +54,8 @@ Replaces the earlier "frenzier gameplay" step; that step's ideas stay below for 
    A dead enemy's body turns into chickens in its colour (§6b).
 4. A level is won when all three are dead; each level has a time limit, and running out costs a life and restarts the level (§5).
 5. Each level: enemies faster, arena 10% smaller; level 10 should be hard (§5).
-   Points: chicken 1, big chicken 5, enemy 20 minus 1 per 10 s since the level started, at least 5, plus round(level x 0.33)
-   in every category (§8). Timer retries keep the score (arcade style). The grid size option is dropped (§4).
+   Points: chicken 1, big chicken 5, enemy 20 minus 1 per 10 s since the level started, at least 5, plus round(level x 0.33 x base)
+   in every category (§8; level 3: +1 / +5 / +20). Timer retries keep the score (arcade style). The grid size option is dropped (§4).
 6. Chickens sometimes hop 1 to 2 cells after a short wind-up (§6).
 Suggested order: roadmap step 4 first (quick), then items 1 + 2 + 6 (chickens), then 3, then 4 + 5 (levels).
 

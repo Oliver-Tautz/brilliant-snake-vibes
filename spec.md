@@ -92,9 +92,10 @@ Dropped only by animals when caught (chance per tier **TBD**).
 
 ## 8. Scoring
 - Points come from animals and enemy snakes, multiplied by active score multipliers.
-- Base points: chicken 1, big chicken 5, enemy snake 20 minus 1 per 10 s since the level started, never below 5.
-- Every category also gets round(level x 0.33) extra points, so later levels pay more.
-- Order (**TBD**, suggest): the enemy floor of 5 applies to the base; then (base + level bonus) x multipliers.
+- Base points: chicken 1, big chicken 5, enemy snake 20.
+- Level bonus: every category gets round(level x 0.33 x base) extra. Level 3 example: chicken 1 + 1, big chicken 5 + 5, enemy snake 20 + 20.
+- Enemy snakes then lose 1 point per 10 s since the level started (the decay does not scale with the level), never below 5.
+- Score multipliers apply last (**TBD**, suggest).
 - Highscores: the top 10 runs (score, level reached, date) saved in the browser. Shown in the main menu's Highscores page and on the game-over card, with the new entry marked.
 
 ## 9. Animations
