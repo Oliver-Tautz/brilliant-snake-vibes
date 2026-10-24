@@ -86,7 +86,7 @@ for attempt in 1 2 3 4 5; do
   else
     git worktree add -q --detach "$work"
     git -C "$work" checkout -q --orphan "$tmp_branch"
-    git -C "$work" rm -rq --ignore-unmatch .
+    git -C "$work" rm -rqf --ignore-unmatch .  # -f: on a new orphan branch every file counts as staged
   fi
   message=$(apply "$work")
   git -C "$work" add -A

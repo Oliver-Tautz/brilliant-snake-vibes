@@ -12,7 +12,9 @@ git init -q "$tmp/repo"
 cd "$tmp/repo"
 git config user.email test@example.com
 git config user.name test
-git commit -q --allow-empty -m init
+echo project >project.txt  # a real file, like the game repo, so the first (orphan) publish must clear it
+git add project.txt
+git commit -q -m init
 git remote add origin "$tmp/origin.git"
 git push -q origin HEAD:refs/heads/main HEAD:refs/heads/feature/worker-x
 mkdir -p "$tmp/build"
@@ -24,6 +26,8 @@ listing() { git -C "$tmp/repo" fetch -q origin gh-pages && git -C "$tmp/repo" ls
 "$script" publish "$tmp/build" branch main >/dev/null
 check "main publishes to the root" '[ "$(pages index.html)" = main1 ]'
 check "root gets .nojekyll" 'listing | grep -qx .nojekyll'
+check "first publish leaves the project files out of gh-pages" '! listing | grep -qx project.txt'
+check "publishing leaves the main checkout untouched" '[ -f "$tmp/repo/project.txt" ] && [ -z "$(git -C "$tmp/repo" status --porcelain)" ]'
 
 echo feature >"$tmp/build/index.html"
 "$script" publish "$tmp/build" branch feature/worker-x >/dev/null
