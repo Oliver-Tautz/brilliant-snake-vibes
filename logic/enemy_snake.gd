@@ -21,3 +21,8 @@ func _init(kind: int, cells: Array[Vector2i], heading: Vector2i, seconds_per_mov
 	body = cells
 	direction = heading
 	interval = seconds_per_move
+
+
+## True just after a step, until the head is drawn halfway into its new cell: it still looks a cell back.
+func head_drawn_behind() -> bool:
+	return last_moved and clock < interval * 0.5

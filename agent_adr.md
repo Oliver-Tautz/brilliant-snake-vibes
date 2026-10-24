@@ -476,3 +476,11 @@ Append-only. Format is defined in AGENTS.md.
 - Why: live pictures always match the current look, follow spec §17 (assets as code) and add nothing to the download.
 - Source: user message
 - Revisit if: the pictures are too small on phones.
+
+## 2026-10-24 — Bite zone follows the drawn head; fangs only in How to play
+- Decision: right after an enemy step (until it is drawn halfway into its new cell) the side-bite zone reaches one cell further, and the glow shows it. The "bite here" fangs are drawn only in the How to play pictures.
+- Decided by: claude (fangs: user)
+- Why: the user died biting what looked like the head/neck; enemies are drawn a cell behind their logic head just after a step, so the zone did not match the picture. The user disliked the fangs in play.
+- Source: user playtest screenshot, 2026-10-24.
+- Note: departs from spec §6b (head only from level 6; glow with fangs) until the user approves new wording.
+- Revisit if: the zone feels too generous again.

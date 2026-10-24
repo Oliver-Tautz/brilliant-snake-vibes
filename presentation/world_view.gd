@@ -16,6 +16,7 @@ var dying_kind := 0  ## its SnakeGame.Food, since its cell is already empty
 var show_prey := true
 var show_snake := true
 var show_walls := true
+var show_fangs := false  # the "bite here" fangs, only in the How to play pictures
 
 var _path := PackedVector2Array()
 var _enemy_path := PackedVector2Array()
@@ -117,7 +118,7 @@ func _draw_enemy(enemy) -> void:
 			return
 	var id: int = 5000 + enemy.species * 1000
 	var fill: Color = Ink.SNAKE_COLORS[enemy.species]
-	_draw_bite_zone(path, Vector2(enemy.direction))
+	_draw_bite_zone(path, Vector2(enemy.direction), enemy.head_drawn_behind())
 	_draw_hose(path, View.BODY_WIDTH * 0.5 * ENEMY_WIDTHS[enemy.species], fill, id)
 	var at := _inked[0]
 	var fwd := Vector2(enemy.direction)
@@ -156,10 +157,11 @@ func _draw_enemy(enemy) -> void:
 
 ## A pulsing glow behind the cells of an enemy that a bite from the side kills (game.bite_cells(),
 ## spec §6b), in a dull grey-red (§11), with a pair of white fangs snapping at it: "bite here".
-func _draw_bite_zone(path: PackedVector2Array, heading: Vector2) -> void:
+func _draw_bite_zone(path: PackedVector2Array, heading: Vector2, lagging: bool) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.5)
 	var radius := View.CELL * (0.66 + 0.08 * pulse)
-	var last := mini(game.bite_cells(), path.size()) - 1
+	var lag := 1 if lagging else 0  # the zone reaches one cell further while the head is drawn behind
+	var last := mini(game.bite_cells() + lag, path.size()) - 1
 	for pass_i in 2:  # a thin ink rim, then the glow
 		var r := radius + (View.INK_WIDTH * 0.6 if pass_i == 0 else 0.0)
 		var color := Color(Ink.INK, 0.7) if pass_i == 0 else Color(Ink.VULNERABLE, 0.6 + 0.3 * pulse)
@@ -167,6 +169,8 @@ func _draw_bite_zone(path: PackedVector2Array, heading: Vector2) -> void:
 			Ink.disc(self, path[k], r, color)
 			if k < last:
 				Ink.bar(self, path[k], path[k + 1], r, color)
+	if not show_fangs:
+		return
 	var mid := path[0].lerp(path[last], 0.5)
 	var side := heading.orthogonal()
 	var gap := radius * (0.95 + 0.45 * pulse)  # the fangs open and close with the pulse

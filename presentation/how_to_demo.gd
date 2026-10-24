@@ -24,6 +24,7 @@ func _init() -> void:
 	(_floor.material as ShaderMaterial).shader = preload("res://presentation/floor.gdshader")
 	_floor.set_script(preload("res://presentation/floor.gd"))
 	_world.set_script(preload("res://presentation/world_view.gd"))
+	_world.show_fangs = true
 	_viewport.add_child(_floor)
 	_viewport.add_child(_world)
 	_viewport.add_child(_camera)

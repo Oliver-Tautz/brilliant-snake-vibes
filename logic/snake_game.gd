@@ -425,13 +425,16 @@ func bite_cells() -> int:
 
 
 ## The enemy whose head is at `cell`, or whose neck is there while the bite zone includes it.
+## Enemies are drawn sliding into their new cell, so just after a step the head still looks a cell
+## back; until it is drawn halfway there the zone reaches one cell further, to match what is seen.
 func _enemy_bitten(cell: Vector2i):
 	var foe = _enemy_with_head(cell)
 	if foe != null:
 		return foe
 	for enemy in enemies:
 		if enemy.alive:
-			for k in range(1, mini(bite_cells(), enemy.body.size())):
+			var lag := 1 if enemy.head_drawn_behind() else 0
+			for k in range(1, mini(bite_cells() + lag, enemy.body.size())):
 				if enemy.body[k] == cell:
 					return enemy
 	return null
