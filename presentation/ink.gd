@@ -6,7 +6,7 @@ const INK := Color(0.05, 0.05, 0.05)
 # Muted, slightly off accents (spec §11): big chickens, and the enemy snakes (green, purple, black)
 # together with the chickens they leave behind.
 const ORANGE := Color(0.74, 0.5, 0.28)
-const VULNERABLE := Color(0.62, 0.78, 0.42)  # pale bile green: the part of an enemy that can be bitten
+const VULNERABLE := Color(0.58, 0.38, 0.36)  # dull grey-red, far from the blood red: the part of an enemy that can be bitten
 const SNAKE_COLORS: Array[Color] = [Color(0.47, 0.54, 0.3), Color(0.47, 0.34, 0.5), Color(0.16, 0.16, 0.15)]
 static var PAPER := Color(Art.paper_tone, Art.paper_tone, Art.paper_tone * 0.99)  # seed[23]
 

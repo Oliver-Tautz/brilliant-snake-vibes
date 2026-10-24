@@ -450,3 +450,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the rule must hold at the speeds the game actually reaches.
 - Source: user screenshot; enemy speeds in logic/game_config.gd
 - Revisit if: it makes killing too easy at low levels.
+
+## 2026-10-24 — Bite zone glow is grey-red
+- Decision: the glow on an enemy's biteable head and neck is a dull grey-red (Ink.VULNERABLE = 0.58, 0.38, 0.36) instead of pale bile green. Spec §6b and §11 updated at the user's request.
+- Decided by: user (grey-red); claude (exact shade, kept well away from the blood red)
+- Why: user asked for the neck marking to be grey-red instead of green.
+- Source: user message
+- Revisit if: it reads as blood or vanishes against the green anaconda.
