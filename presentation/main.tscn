@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1"]
 [ext_resource type="Script" path="res://presentation/floor.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://presentation/world_view.gd" id="5"]
 [ext_resource type="Script" path="res://presentation/intertitle.gd" id="6"]
 [ext_resource type="Shader" path="res://presentation/film.gdshader" id="7"]
+[ext_resource type="Script" path="res://presentation/perf_overlay.gd" id="8"]
 
 [sub_resource type="ShaderMaterial" id="floor_mat"]
 shader = ExtResource("3")
@@ -95,3 +96,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="PerfOverlay" type="CanvasLayer" parent="."]
+layer = 3
+script = ExtResource("8")
+
+[node name="Label" type="Label" parent="PerfOverlay"]
+offset_left = 14.0
+offset_top = 76.0
+offset_right = 420.0
+offset_bottom = 126.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+text = "measuring..."

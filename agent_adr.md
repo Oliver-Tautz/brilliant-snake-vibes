@@ -187,3 +187,17 @@ Append-only. Format is defined in AGENTS.md.
 - Why: any seed must produce a readable look, not just the current one. Verified with `tools/capture.gd -- out.png edge <wall>` for all three styles.
 - Source: reviewer findings
 - Revisit if: the board gets a non-black surround.
+
+## 2026-10-24 — Performance: batch all circles through one disc texture, fixed render resolution
+- Decision: every circle, ellipse, snake segment and blood drop is drawn as a tinted quad of one generated antialiased disc texture (`Ink.disc`, `Ink.ellipse`, `Ink.bar`), so Godot batches them. The window renders at the 1152x648 base resolution and is scaled up (`stretch/mode="viewport"`, aspect expand). F3 shows an FPS overlay. `tools/benchmark.gd` measures each layer.
+- Decided by: claude (after the user reported the browser build is very slow on an integrated-GPU laptop)
+- Why: the benchmark showed ~4,900 draw calls per frame (one per antialiased circle): 28 ms at 1080p even on a fast GPU, 4.9 ms after batching (313 calls). With software rendering at 2880x1800 the full-screen film shader halved the frame rate; at the fixed resolution it runs about 57 fps regardless of screen size.
+- Source: benchmark numbers in docs/roadmap.md; spec §13 (60 FPS target)
+- Revisit if: the scaled-up image looks too soft on large screens, or dense prey (frenzy step) needs prey drawn from pre-rendered sprites (dense prey is still ~21 ms).
+
+## 2026-10-24 — Fixed view area as a side effect of the render resolution
+- Decision: with viewport stretch, every screen sees the same world area (1152x648 / zoom, about 29 x 16 cells, widened to fit the window's aspect). Before, a bigger window showed more of the board, and a phone showed much less.
+- Decided by: reviewer (flagged it); claude (kept it); user confirmation asked at the end of this iteration
+- Why: same view on every device is fairer and simpler; it falls out of the performance fix.
+- Source: reviewer finding; spec §4 (zoom scales with grid size, minimum snake size on screen TBD)
+- Revisit if: the user wants big screens to show more of the board.

@@ -10,12 +10,20 @@ var t := 1.0  ## progress through the current tick, 0..1
 var eat_pulse := 0.0  ## seconds left of the head's gulp swell
 var view_rect := Rect2()  ## visible world area, for culling
 var dying_prey := Vector2i(-1, -1)  ## eaten prey still drawn until the head reaches it
+# Layer switches, used by the benchmark to measure each layer's cost.
+var show_prey := true
+var show_snake := true
+var show_walls := true
 
 var _path := PackedVector2Array()
 var _inked := PackedVector2Array()
 var _tail := PackedVector2Array()
 var _snout := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 var _snout_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+
+
+func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # for the shared disc texture
 
 
 ## The snake's centre line for this frame. It runs through the real cell centres, so corners stay
@@ -39,16 +47,18 @@ func _draw() -> void:
 	if game == null:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
-	for cell in game.foods:
-		var c := View.center(cell)
-		if view_rect.has_point(c):
-			_draw_prey(cell, c, now)
-	if dying_prey.x >= 0:
-		_draw_prey(dying_prey, View.center(dying_prey), now)
+	if show_prey:
+		for cell in game.foods:
+			var c := View.center(cell)
+			if view_rect.has_point(c):
+				_draw_prey(cell, c, now)
+		if dying_prey.x >= 0:
+			_draw_prey(dying_prey, View.center(dying_prey), now)
 	var blink_off := game.invulnerable_time > 0.0 and int(now * 10.0) % 2 == 0
-	if not blink_off:
+	if show_snake and not blink_off:
 		_draw_snake()
-	_draw_walls()
+	if show_walls:
+		_draw_walls()
 
 
 func _draw_snake() -> void:
@@ -60,8 +70,9 @@ func _draw_snake() -> void:
 	var half := View.BODY_WIDTH * 0.5
 	var ink := View.INK_WIDTH
 	var cull := view_rect.grow(View.CELL)
-	# Ink pass, then paper pass on top, gives an outlined rubber hose. Segments are drawn without
-	# caps and every joint gets a circle, so corners come out round.
+	# Ink pass, then paper pass on top, gives an outlined rubber hose. Segments are square-ended bars
+	# and every joint gets a disc, so corners come out round. Everything is the same texture, so the
+	# whole snake renders in one batch.
 	for pass_i in 2:
 		var color := Ink.INK if pass_i == 0 else Ink.PAPER
 		for i in count:
@@ -71,8 +82,8 @@ func _draw_snake() -> void:
 			if pass_i == 0:
 				radius += ink * (0.8 + 0.4 * Ink.rand(i, Ink.boil_frame()))
 			if i + 1 < count:
-				draw_line(_inked[i], _inked[i + 1], color, radius * 2.0)
-			draw_circle(_inked[i], radius, color, true, -1.0, true)
+				Ink.bar(self, _inked[i], _inked[i + 1], radius, color)
+			Ink.disc(self, _inked[i], radius, color)
 	_draw_skin(path, half, cull)
 	_draw_head(_inked[0])
 
@@ -100,7 +111,7 @@ func _draw_skin(path: PackedVector2Array, half: float, cull: Rect2) -> void:
 			Art.SkinPattern.SPOTS:
 				if i % 2 == 1:
 					var sway := 0.35 if i % 4 == 1 else -0.35
-					draw_circle(_inked[i] + across * sway, half * 0.22, Ink.INK, true, -1.0, true)
+					Ink.disc(self, _inked[i] + across * sway, half * 0.22, Ink.INK)
 
 
 ## Head with squash and stretch, pie-cut eyes and fangs. Shape from seed[4], fang length seed[5],
@@ -227,7 +238,7 @@ func _draw_mouse(body: Vector2, r: float, face: float, squash: float, id: int, n
 	Ink.blob(self, body, Vector2(r * 1.1 / squash, r * squash), Ink.PAPER, 2.0, id)
 	Ink.pie_eye(self, body + Vector2(face * r * 0.2, -r * 0.2), r * 0.32, Vector2(face, -0.3), id + 3)
 	Ink.pie_eye(self, body + Vector2(face * r * 0.65, -r * 0.2), r * 0.32, Vector2(face, -0.3), id + 4)
-	draw_circle(body + Vector2(face * r * 1.1, r * 0.15), 2.2, Ink.INK, true, -1.0, true)
+	Ink.disc(self, body + Vector2(face * r * 1.1, r * 0.15), 2.2, Ink.INK)
 
 
 func _draw_chick(body: Vector2, r: float, face: float, squash: float, id: int, now: float, phase: float) -> void:
@@ -264,7 +275,7 @@ func _draw_beetle(body: Vector2, r: float, face: float, squash: float, id: int, 
 	for s in 2:
 		var sgn := 1.0 if s == 0 else -1.0
 		draw_line(head, head + Vector2(face * r * 0.6, sgn * r * 0.55) + Ink.wobble(id + s, 0.5), Ink.INK, 1.2, true)
-	draw_circle(head, r * 0.42, Ink.INK, true, -1.0, true)
+	Ink.disc(self, head, r * 0.42, Ink.INK)
 	Ink.blob(self, body, Vector2(r * 1.1 / squash, r * 0.85 * squash), Ink.PAPER, 2.0, id)
 	draw_line(body - Vector2(face * r * 0.95, 0.0), body + Vector2(face * r * 0.6, 0.0), Ink.INK, 1.5, true)
 	Ink.pie_eye(self, head + Vector2(face * r * 0.1, -r * 0.2), r * 0.24, Vector2(face, 0.0), id + 3)

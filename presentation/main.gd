@@ -108,6 +108,8 @@ func _handle_key(keycode: Key) -> void:
 			if not game.game_over:
 				paused = not paused
 				_gore.set_process(not paused)
+		KEY_F3:
+			$PerfOverlay.toggle()
 		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_R:
 			if game.game_over:
 				_new_game()

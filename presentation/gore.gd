@@ -32,6 +32,7 @@ var _since_splat := INF  # seconds since the newest splat; all splats are gone a
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # for the shared disc texture
 	_drop_pos.resize(MAX_DROPS)
 	_drop_vel.resize(MAX_DROPS)
 	_drop_life.resize(MAX_DROPS)
@@ -149,15 +150,15 @@ func _draw() -> void:
 		var at := _splat_pos[k]
 		var size := _splat_size[k]
 		var color := Color(BLOOD_DARK if k % 3 == 0 else BLOOD, fade)
-		draw_circle(at, size * 0.6, color, true, -1.0, true)
+		Ink.disc(self, at, size * 0.6, color)
 		for j in 4:  # irregular blob: a few lobes around the centre
 			var dir := Vector2.from_angle(Ink.rand(k, j) * TAU)
-			draw_circle(at + dir * size * 0.55, size * (0.2 + 0.25 * Ink.rand(k, j + 9)), color,
-					true, -1.0, true)
+			Ink.disc(self, at + dir * size * 0.55, size * (0.2 + 0.25 * Ink.rand(k, j + 9)), color)
+	# Drops as a short streak of discs along their flight, all one texture so they batch.
 	for k in _drop_count:
-		var tail := _drop_pos[k] - _drop_vel[k] * 0.03
-		draw_line(tail, _drop_pos[k], BLOOD, _drop_size[k], true)
-		draw_circle(_drop_pos[k], _drop_size[k] * 0.5, BLOOD, true, -1.0, true)
+		var tail := _drop_vel[k].limit_length(_drop_size[k] * 40.0) * 0.012  # keep the dots touching
+		for j in 3:
+			Ink.disc(self, _drop_pos[k] - tail * j, _drop_size[k] * (0.5 - 0.1 * j), BLOOD)
 	for k in _bone_count:
 		var alpha := clampf((BONE_LIFETIME - _bone_age[k]) / 0.5, 0.0, 1.0)
 		Ink.bone(self, _bone_pos[k], _bone_rot[k], 10.0, alpha)

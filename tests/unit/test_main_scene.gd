@@ -241,5 +241,26 @@ func test_hud_uses_bundled_serif_font() -> void:
 
 func test_every_scene_script_loads() -> void:
 	# A script with a parse error would silently drop off its node; catch that here.
-	for path in ["Floor", "Gore", "World", "HUD/Status", "HUD/Banner"]:
+	for path in ["Floor", "Gore", "World", "HUD/Status", "HUD/Banner", "PerfOverlay"]:
 		assert_not_null(main.get_node(path).get_script(), path)
+
+
+func test_f3_toggles_perf_overlay_and_it_reports() -> void:
+	var overlay = main.get_node("PerfOverlay")
+	assert_false(overlay.visible)
+	main._handle_key(KEY_F3)
+	assert_true(overlay.visible)
+	for i in 3:
+		overlay._process(0.2)
+	assert_string_contains(overlay.get_node("Label").text, "fps")
+	main._handle_key(KEY_F3)
+	assert_false(overlay.visible)
+
+
+func test_world_layers_can_be_switched_off() -> void:
+	world.show_prey = false
+	world.show_snake = false
+	world.show_walls = false
+	world.queue_redraw()
+	await wait_process_frames(2)
+	assert_true(is_instance_valid(world))

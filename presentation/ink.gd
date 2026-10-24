@@ -13,6 +13,8 @@ static var _quad := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO
 static var _quad_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _fang_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 static var _rect_line := PackedVector2Array()
+static var _disc: ImageTexture
+const DISC_CORE := Rect2(56.0, 56.0, 16.0, 16.0)  # fully opaque middle of the disc texture
 
 
 ## Frame counter for line boil: lines re-wobble a few times a second (seed[8]), like redrawn cels.
@@ -43,9 +45,46 @@ static func blob(ci: CanvasItem, center: Vector2, radii: Vector2, fill: Color, l
 	ellipse(ci, c, radii, fill, angle)
 
 
+## A white antialiased disc, generated once. Every circle and ellipse is this texture tinted, so
+## Godot batches them into a few draw calls instead of one call per circle.
+static func disc_texture() -> Texture2D:
+	if _disc == null:
+		var size := 128
+		var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+		var c := size / 2.0
+		for y in size:
+			for x in size:
+				var d := Vector2(x + 0.5 - c, y + 0.5 - c).length()
+				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(c - 1.0 - d, 0.0, 1.0)))
+		img.generate_mipmaps()
+		_disc = ImageTexture.create_from_image(img)
+	return _disc
+
+
+static func disc(ci: CanvasItem, center: Vector2, radius: float, color: Color) -> void:
+	ci.draw_texture_rect(disc_texture(), Rect2(center.x - radius, center.y - radius, radius * 2.0, radius * 2.0),
+			false, color)
+
+
+## A thick, square-ended bar between two points that are (nearly) in line horizontally or vertically,
+## cut from the solid middle of the disc texture so it batches with the discs.
+static func bar(ci: CanvasItem, a: Vector2, b: Vector2, half_width: float, color: Color) -> void:
+	var rect: Rect2
+	if absf(a.x - b.x) >= absf(a.y - b.y):
+		var y := (a.y + b.y) * 0.5
+		rect = Rect2(minf(a.x, b.x), y - half_width, absf(a.x - b.x), half_width * 2.0)
+	else:
+		var x := (a.x + b.x) * 0.5
+		rect = Rect2(x - half_width, minf(a.y, b.y), half_width * 2.0, absf(a.y - b.y))
+	ci.draw_texture_rect_region(disc_texture(), rect, DISC_CORE, color)
+
+
 static func ellipse(ci: CanvasItem, center: Vector2, radii: Vector2, color: Color, angle := 0.0) -> void:
-	ci.draw_set_transform(center, angle, radii / 16.0)
-	ci.draw_circle(Vector2.ZERO, 16.0, color, true, -1.0, true)
+	if angle == 0.0:
+		ci.draw_texture_rect(disc_texture(), Rect2(center - radii, radii * 2.0), false, color)
+		return
+	ci.draw_set_transform(center, angle, Vector2.ONE)
+	ci.draw_texture_rect(disc_texture(), Rect2(-radii, radii * 2.0), false, color)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -54,7 +93,7 @@ static func pie_eye(ci: CanvasItem, center: Vector2, r: float, look: Vector2, id
 	blob(ci, center, Vector2(r * 0.78, r), PAPER, maxf(1.4, r * 0.22), id)
 	var p := center + look * r * 0.3 + Vector2(0.0, r * 0.12)
 	var pr := r * 0.55
-	ci.draw_circle(p, pr, INK, true, -1.0, true)
+	disc(ci, p, pr, INK)
 	_tri[0] = p
 	_tri[1] = p + Vector2(pr * 1.15, -pr * 0.5)
 	_tri[2] = p + Vector2(pr * 0.45, -pr * 1.15)
@@ -87,10 +126,10 @@ static func bone(ci: CanvasItem, center: Vector2, angle: float, length: float, a
 		var color := ink if pass_i == 0 else paper
 		var r := knob * 0.7 + grow
 		ci.draw_rect(Rect2(-half, -knob * 0.5 - grow, length, knob + grow * 2.0), color)
-		ci.draw_circle(Vector2(-half, -knob * 0.6), r, color, true, -1.0, true)
-		ci.draw_circle(Vector2(-half, knob * 0.6), r, color, true, -1.0, true)
-		ci.draw_circle(Vector2(half, -knob * 0.6), r, color, true, -1.0, true)
-		ci.draw_circle(Vector2(half, knob * 0.6), r, color, true, -1.0, true)
+		disc(ci, Vector2(-half, -knob * 0.6), r, color)
+		disc(ci, Vector2(-half, knob * 0.6), r, color)
+		disc(ci, Vector2(half, -knob * 0.6), r, color)
+		disc(ci, Vector2(half, knob * 0.6), r, color)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

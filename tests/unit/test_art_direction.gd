@@ -123,3 +123,12 @@ func test_hatched_walls_draw_along_visible_edges() -> void:
 	world.queue_redraw()
 	await wait_process_frames(2)
 	assert_true(is_instance_valid(world))
+
+
+func test_disc_texture_is_generated_once_and_opaque_in_the_middle() -> void:
+	var tex := Ink.disc_texture()
+	assert_eq(Ink.disc_texture(), tex)
+	var img := tex.get_image()
+	assert_almost_eq(img.get_pixel(64, 64).a, 1.0, 0.01)
+	assert_almost_eq(img.get_pixel(0, 0).a, 0.0, 0.01)
+	assert_almost_eq(img.get_pixelv(Vector2i(Ink.DISC_CORE.position)).a, 1.0, 0.01)
