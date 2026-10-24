@@ -3,40 +3,55 @@
 Status: Draft v0.1. Items marked **TBD** need a decision.
 
 ## 1. Goal
-A browser and phone Snake game with a hand-drawn horror look. The player hunts animals on a configurable, potentially huge grid. Delivered as a Godot web build to GitHub Pages via GitHub Actions.
+A browser and phone Snake game with a hand-drawn horror look. The player hunts chickens in an arena that shrinks each level and fights three enemy snakes for them. Delivered as a Godot web build to GitHub Pages via GitHub Actions.
 
 ## 2. Game Loop
-1. Main menu: Play, Options, link to GitHub.
-2. Options: start level, grid size, touch control mode, audio.
-3. Run: the snake moves, hunts animals, collects power-ups.
+1. Main menu: Play, Gore (On / Off), Highscores, Options, link to GitHub.
+2. Options: start level, view (follow / fit), on-screen arrows on touch (shown / hidden), fullscreen, audio.
+3. Run: the snake moves, hunts chickens, competes with three enemy snakes, collects power-ups.
 4. Life lost: snake shrinks, brief invulnerability, play continues.
-5. Game over (0 lives): score summary, local best, Restart or Menu.
+5. Level won: all three enemy snakes are dead. The next level starts (see §5).
+6. Game over (0 lives): score summary and the highscore table with the new entry marked, Restart or Menu.
 
 ### Rules
-- Lives: 3. Everything costs a life: walls, own body, dangerous animals.
+- Lives: 3. Everything costs a life: walls, own body, an enemy snake's body or a lost head-on fight (§6b), the level timer running out (§5), dangerous animals.
 - On life loss the snake loses 50% of its length (minimum length **TBD**, suggest 3), is placed on a safe cell and is invulnerable for a short time (**TBD**, suggest 2 s, blinking).
-- Speed increases with each food eaten, up to a cap (**TBD** values).
+- The player's speed increases with each food eaten, up to a cap (**TBD** values), and goes back to its base speed at each new level.
 - Game over when the last life is lost.
 
 ## 3. Player Movement
 - Grid-based logic, smooth interpolated visuals.
 - No reversing into the neck; input buffer of 2 turns.
 - Keyboard: Arrow keys and WASD. Esc or P pauses.
-- Touch: swipe or on-screen D-pad, selectable in options. Pause button always visible.
-- Speed is set by the starting level and rises during the run.
+- Touch: swiping always works; the on-screen D-pad can be shown or hidden in options. Pause button always visible.
+- The player's speed rises as they eat (see Rules); levels only make the enemies faster (§5).
 
-## 4. Grid and Screen Size
-- Presets S / M / L / XL plus custom width x height.
-- Must support at least 500 x 500 cells.
-- Default view: camera follows the snake. Player can switch to fit-whole-grid in options.
-- Zoom scales with grid size (zoom out for larger grids) but the snake never gets smaller than a minimum on-screen size (**TBD** px).
+## 4. Arena and Screen Size
+- No grid size option: the arena size comes from the level (§5). Level 1 arena size **TBD**.
+- The engine must still support arenas of at least 500 x 500 cells.
+- Default view: camera follows the snake. Player can switch to fit-whole-arena in options.
+- Zoom scales with arena size (zoom out for larger grids) but the snake never gets smaller than a minimum on-screen size (**TBD** px).
 - Performance rule: no node per cell. Grid is a data array; only visible cells are drawn.
 
-## 5. Starting Levels
-- Numbered levels 1 to 10, each a combination of speed and starting length (table **TBD**).
+## 5. Levels and Progression
+- A level is won when all three enemy snakes are dead.
+- Each level has a time limit (**TBD**). When it runs out before all three enemies are dead, the player loses a life and the level restarts: clock reset, all three enemies back, score kept (arcade style: the score only resets at game over). The player's length and speed on a retry are **TBD** (suggest: as at the start of the level). Game over on the last life.
+- Each new level is harder: the enemy snakes are faster (the player's speed is not affected) and the arena shrinks by 10% (minimum size **TBD**). Reaching level 10 should be hard.
+- Score and lives carry over to the next level; what happens to the player's length is **TBD** (suggest: back to the starting length).
+- Numbered levels 1 to 10 can be picked as the starting level, each a combination of enemy speed and arena size (table **TBD**).
 - Selected in a simple, attractive options menu.
 
 ## 6. Animals (Food)
+### Chickens
+- Chickens are the prey and the only animals for now. They replace the stationary tier 1 in the table below.
+- The arena keeps a target number of chickens (**TBD**, scales with arena size). When there are fewer, new ones appear one at a time on random free cells after a short delay (**TBD**, suggest 1 s), not instantly.
+- Big chickens: rarer (**TBD**, suggest 1 in 8), tinted slightly orange, worth more points (see §8) and make the snake grow faster (**TBD**, suggest +3).
+- Now and then a chicken hops 1 to 2 cells, slowly, into free cells only. A short wind-up (crouch and shake, **TBD**, suggest 0.5 s) comes first so the player can see it coming.
+- Enemy snakes eat chickens too and grow from them.
+
+### Later tiers
+Tier 1 is now the chickens above; tiers 2 and 3 are for later.
+
 | Tier       | Behavior             | Modes                  | Reward                   |
 | ---------- | -------------------- | ---------------------- | ------------------------ |
 | 1 Prey     | Stationary, helpless | None                   | Low points, grow 1       |
@@ -49,6 +64,25 @@ A browser and phone Snake game with a hand-drawn horror look. The player hunts a
 - Spawn counts and AI movement rules **TBD**.
 - Point and growth values **TBD** (tunable in one data file).
 
+## 6b. Enemy Snakes
+- Three per level. Each is themed after a real snake, with its own head design, colour and speed:
+
+| Snake  | Colour       | Real snake     | Speed  | Head                                   |
+| ------ | ------------ | -------------- | ------ | -------------------------------------- |
+| Green  | Muted green  | Green anaconda | Slow   | Broad, heavy jaw                       |
+| Purple | Muted purple | King cobra     | Faster | Spread hood                            |
+| Black  | Ink black    | Black mamba    | Fast   | Narrow coffin-shaped head, black mouth |
+
+- They compete with the player for chickens and grow when they eat.
+- Contact rules (bodies are walls):
+  - Player's head into an enemy's body: the player loses a life.
+  - Enemy's head into the player's body: the enemy dies. Trapping them is a way to kill them.
+  - Head-on (the heads meet): the longer snake wins; on a tie the player wins. So biting an enemy's head kills it only if the player is at least as long.
+  - Enemies avoid walls, their own bodies and each other; an enemy with no free move dies.
+- Dead enemies burst (gore) and do not come back this level. Their body turns into chickens, one per few segments (**TBD**), tinted in the dead snake's colour; they count as normal chickens.
+- Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.
+- AI is semi-intelligent and cheap: each move scores its three options (towards the nearest chicken, away from walls and bodies, a short flood fill of at most **TBD** cells, suggest 30, to avoid dead ends). No full-grid pathfinding; a fixed cost per enemy move.
+
 ## 7. Power-ups
 Dropped only by animals when caught (chance per tier **TBD**).
 
@@ -57,8 +91,11 @@ Dropped only by animals when caught (chance per tier **TBD**).
 - Each has a duration and an on-screen indicator with a timer.
 
 ## 8. Scoring
-- Points come from animals by tier, multiplied by active score multipliers.
-- Local best saved in the browser per setup (start level + grid size).
+- Points come from animals and enemy snakes, multiplied by active score multipliers.
+- Base points: chicken 1, big chicken 5, enemy snake 20 minus 1 per 10 s since the level started, never below 5.
+- Every category also gets round(level x 0.33) extra points, so later levels pay more.
+- Order (**TBD**, suggest): the enemy floor of 5 applies to the base; then (base + level bonus) x multipliers.
+- Highscores: the top 10 runs (score, level reached, date) saved in the browser. Shown in the main menu's Highscores page and on the game-over card, with the new entry marked.
 
 ## 9. Animations
 As many as feasible, all in the hand-drawn style:
@@ -86,11 +123,14 @@ Violent 1920s cartoon horror: hand-drawn, black and white, with sparse color acc
 ### Color accents
 Color is used only to make gameplay elements stand out. Everything else stays black and white.
 
-| Color  | Saturation                       | Used for                                        |
-| ------ | -------------------------------- | ----------------------------------------------- |
-| Red    | Strong, the only saturated color | Blood, damage, life loss, danger telegraph      |
-| Purple | Muted, sickly                    | Bad power-ups, darkness and smokescreen effects |
-| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals  |
+| Color  | Saturation                       | Used for                                                                |
+| ------ | -------------------------------- | ----------------------------------------------------------------------- |
+| Red    | Strong, the only saturated color | Blood, damage, life loss, danger telegraph                              |
+| Purple | Muted, sickly                    | Bad power-ups, darkness and smokescreen effects, the purple enemy snake |
+| Green  | Muted, bile / rot                | Good power-ups, ghost mode, vulnerable animals, the green enemy snake   |
+| Orange | Muted, slightly off              | Big chickens                                                            |
+
+- Chickens left by a dead enemy snake take that snake's colour (green, purple, or ink black).
 
 - No other colors anywhere, including UI.
 - Colors look disgusting, not cheerful: dirty, desaturated, slightly off.
@@ -99,13 +139,14 @@ Color is used only to make gameplay elements stand out. Everything else stays bl
 - Catching an animal: cartoon gore, blood splatter in red, chunks, bones.
 - Blood stains stay on the grid for a while and fade (performance: pooled decals, capped count).
 - Life loss and death: exaggerated cartoon violence on the snake itself.
+- Gore option (On / Off, default On, in the main menu). Off hides all gore: no blood, bones, chunks or stains, and nothing replaces them.
 
 ### UI
 - Title cards and menus styled like 1920s intertitles: ornate frames, black background, white serif or hand-lettered text.
 - Score, lives and power-up timers drawn in the same ink style.
 
 ### Effects
-- Heavy effects are always on (no reduce-effects toggle).
+- Heavy effects are always on (no reduce-effects toggle). The Gore option is the only exception.
 - Film effects are one shader over the whole screen, not per sprite.
 
 ### References
@@ -141,9 +182,12 @@ Target mix: the drawing and animation quality of the 1920s references, with the 
 
 ## 15. Open Questions
 - Art and music references.
-- Level table (speed and length per level).
-- Point values, growth values, drop chances.
-- Animal AI details and spawn rules.
+- Level table (enemy speed and arena size per level).
+- Growth values, drop chances.
+- Levels: level 1 arena size, minimum arena size, time limit, the player's length at a new level.
+- Chickens: target count, big chicken rate, hop wind-up, chickens per dead-enemy segment.
+- Enemy AI: flood-fill cap.
+- Animal AI details and spawn rules (chickens and enemy snakes: see §6, §6b).
 - Minimum snake size on screen, minimum length after shrinking.
 - Wall or self hit: exact respawn behavior.
 

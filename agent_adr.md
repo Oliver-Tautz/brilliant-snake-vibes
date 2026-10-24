@@ -292,3 +292,36 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the user rejected the three-level spec text.
 - Source: user answer to the suggested §11 change
 - Revisit if: the user wants Off to show no effect at all. (The old saved `violence` key is not migrated: the build that wrote it was never pushed.)
+
+## 2026-10-24 — Gameplay plan: chickens, enemy snakes, levels
+- Decision: spec §2, §5, §6, §6b, §8 and §11 rewritten with the user:
+  - Chickens refill one at a time; orange big chickens; chickens hop after a wind-up.
+  - Three enemy snakes (green anaconda slow, purple king cobra faster, black mamba fast) with "bodies are walls" contact rules, where head-on the longer snake wins (a tie goes to the player).
+  - A dead enemy's body turns into chickens in its colour.
+  - Levels are won by killing all three, have a time limit (running out costs a life and restarts the level), and get faster with a 10% smaller arena each time.
+  - Points: chicken 1, big chicken 5, enemy 20 minus 1 per 10 s since the level started, at least 5.
+  - Top-10 highscores.
+  - Gore On/Off on the main menu; Off hides all gore with nothing in its place.
+  - Muted orange is added to the palette.
+  - Hunter/Predator tiers stay in the spec for later.
+- Decided by: user (all rules above); claude (the suggested numbers still marked TBD, the king cobra theme for purple, the "at least 5" floor and 10 s step)
+- Why: the user wants a goal per level and opponents instead of endless growing.
+- Source: user messages and answers, 2026-10-24
+- Revisit if: playtests show levels too hard or too easy (the user will test how hard level 10 is).
+
+## 2026-10-24 — Gameplay plan, review round
+- Decision: the spec plan above was tightened after review:
+  - The grid size option is dropped and the arena comes from the level. The 500 x 500 engine support stays as headroom.
+  - Only enemies get faster per level; the player's speed rises while eating and resets each level.
+  - A timer retry brings all three enemies back and keeps the score (arcade style: the score only resets at game over).
+  - Every point category gets round(level x 0.33) extra.
+  - Chickens replace the old stationary tier 1.
+  - §3 now matches the arrows show/hide option.
+  - Rules list the new ways to lose a life.
+  - New TBDs are collected in §15.
+  - Correction to the entry above: the kill-point formula (1 per 10 s, at least 5) was the option the user picked, so it is decided by the user. The plan also touched §1 and §15.
+- Decided by: user (grid size dropped, enemy-only speed-up with the player's speed resetting each level, which was part of the option they picked; score kept on retry; level bonus); claude (the enemy behaviour rules in §6b: no free move means death, shorter enemies avoid the player's head, faster ones flee, three-option AI; the 0.5 s wind-up suggestion); reviewer (consistency findings)
+- Why: the first draft contradicted itself in several places.
+- Source: reviewer findings; user answers
+- Revisit if: playtests change any of these numbers.
+- Left as TBD with a suggestion: the order of floor, level bonus and multipliers; the player's length and speed on a timer retry.

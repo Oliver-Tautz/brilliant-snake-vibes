@@ -19,7 +19,7 @@ Added on request between steps, so the game can be tried on a tablet.
 - Swipe anywhere (one zig-zag gesture can queue two turns), on-screen D-pad (bottom-right, shown on touch
   screens), always-visible pause button (top-right), tap to resume or restart.
 - All input goes through `presentation/controls.gd` (spec §13 input layer).
-- Later, in step 3: choose swipe or D-pad in the options menu.
+- Step 3 added an option to show or hide the D-pad; swiping always works.
 
 ## 1c. Branch builds and versioning — done (waiting for a working push)
 - Every push is published: `main` → https://oliver-tautz.github.io/brilliant-snake-vibes/,
@@ -28,7 +28,38 @@ Added on request between steps, so the game can be tried on a tablet.
 - User to do once: Settings → Pages → Source: "Deploy from a branch", `gh-pages`, `/ (root)`.
 - Pushing from the user's machine currently hangs on SSH (port 22); see the chat for the port-443 workaround.
 
-## 2. Frenzier gameplay — proposed
+## 3. Menu and options, with a gore switch — done (waiting for the user's tablet test)
+- Title card: Play, Options, GitHub. Pause card: Resume, Restart, Options, Quit to menu, GitHub.
+  Game-over card: score, Restart, Menu. All intertitle cards with buttons (keyboard, mouse, touch).
+- Options: Gore (On / Off), Arrows on touch (Shown / Hidden), Fullscreen (On / Off).
+  Gore and arrows are saved locally (`Settings` autoload); fullscreen is not, browsers only allow it after a tap.
+- Gore On (default): blood, bones and splats. Off: dust puff and spinning stars, no stains.
+  (The user rejected three levels: on/off only.)
+- Spec changes suggested to the user (not made): §11 a Gore on/off option; §2 options list.
+- Still open from spec §2/§4/§5/§8: start level, view (follow / fit), audio, highscores (step 4). Grid size: dropped, see step 5.
+
+## 4. Menu follow-ups — agreed
+- Gore Off hides all gore; no dust or stars instead.
+- The player's snake gets fatter again ("in between": clearly fatter, rows almost touch but keep their outlines).
+- Main menu: Gore On / Off moves to the top level; a Highscores page is added.
+- Highscores (top 10: score, level, date) saved locally; shown on the game-over card with the new entry marked (spec §8).
+
+## 5. New gameplay — agreed, written into spec §1–§6b, §8, §11, §15
+Replaces the earlier "frenzier gameplay" step; that step's ideas stay below for later.
+1. Chickens refill one at a time on random free cells when below the target count (§6).
+2. Big chickens, slightly orange, worth more and grow more (§6, §11).
+3. Three enemy snakes: green anaconda (slow), purple king cobra (faster), black mamba (fast), each with its own
+   head. They compete for chickens and die when their head hits your body, or head-on if you are at least as long (§6b).
+   Cheap AI: score three moves, short flood fill, no full-grid pathfinding.
+   A dead enemy's body turns into chickens in its colour (§6b).
+4. A level is won when all three are dead; each level has a time limit, and running out costs a life and restarts the level (§5).
+5. Each level: enemies faster, arena 10% smaller; level 10 should be hard (§5).
+   Points: chicken 1, big chicken 5, enemy 20 minus 1 per 10 s since the level started, at least 5, plus round(level x 0.33)
+   in every category (§8). Timer retries keep the score (arcade style). The grid size option is dropped (§4).
+6. Chickens sometimes hop 1 to 2 cells after a short wind-up (§6).
+Suggested order: roadmap step 4 first (quick), then items 1 + 2 + 6 (chickens), then 3, then 4 + 5 (levels).
+
+## Later: frenzier gameplay ideas (from the earlier step 2)
 Problem: growing takes far too long; it should feel frantic.
 Reference from the user: **Pac-Man Championship Edition DX** — as fast and interesting, but in the current
 style; some flashing colours are allowed (spec §11 change needed). What makes CE DX work: constantly rising
@@ -43,15 +74,5 @@ Ideas (to pick from):
 - Faster starting speed and steeper speed ramp.
 - Longer starting snake.
 
-## 3. Menu and options, with a gore switch — done (waiting for the user's tablet test)
-- Title card: Play, Options, GitHub. Pause card: Resume, Restart, Options, Quit to menu, GitHub.
-  Game-over card: score, Restart, Menu. All intertitle cards with buttons (keyboard, mouse, touch).
-- Options: Gore (On / Off), Arrows on touch (Shown / Hidden), Fullscreen (On / Off).
-  Gore and arrows are saved locally (`Settings` autoload); fullscreen is not, browsers only allow it after a tap.
-- Gore On (default): blood, bones and splats. Off: dust puff and spinning stars, no stains.
-  (The user rejected three levels: on/off only.)
-- Spec changes suggested to the user (not made): §11 a Gore on/off option; §2 options list.
-- Still open from spec §2/§4/§5/§8: start level, grid size, view (follow / fit), audio, local best on the game-over card.
-
 ## Spec drift to fix
-- §1 still says "via a GitLab pipeline"; §14 now says GitHub Actions.
+- Fixed: §1 used to say "via a GitLab pipeline"; it now says GitHub Actions like §14.
