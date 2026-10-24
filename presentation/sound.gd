@@ -84,14 +84,14 @@ func has_sound(name: StringName) -> bool:
 
 ## Plays an effect with a little random pitch, so repeats do not sound mechanical. Gore sounds are
 ## skipped with Gore off (spec §11).
-func play(name: StringName, volume_db := 0.0, pitch_jitter := 0.06) -> void:
+func play(name: StringName, volume_db := 0.0, pitch_jitter := 0.06, pitch := 1.0) -> void:
 	if not _streams.has(name) or (name in SoundBank.GORE and not Settings.gore):
 		return
 	var player := _players[_next_player]
 	_next_player = (_next_player + 1) % PLAYERS
 	player.stream = _streams[name]
 	player.volume_db = volume_db
-	player.pitch_scale = 1.0 + randf_range(-pitch_jitter, pitch_jitter)
+	player.pitch_scale = pitch * (1.0 + randf_range(-pitch_jitter, pitch_jitter))
 	player.play()
 
 

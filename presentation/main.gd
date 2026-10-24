@@ -5,6 +5,11 @@ const View := preload("res://presentation/view_config.gd")
 const Cfg := preload("res://logic/game_config.gd")
 const MAX_TICKS_PER_FRAME := 5
 const HUD_BAND := 76.0  # base pixels the status bar covers at the top of the screen
+const HITSTOP := 0.09  # seconds the game freezes when an enemy dies: a cartoon "smack"
+## Shouted when the combo multiplier reaches each level (with Gore off the bloodier ones are softened).
+const COMBO_NAMES := {2: "CHOMP", 3: "GOBBLE", 4: "GLUTTON", 5: "MASSACRE", 6: "CARNAGE", 7: "BLOODBATH", 8: "APOCALYPSE"}
+const SOFT_NAMES := {5: "FEAST", 6: "BANQUET", 7: "STAMPEDE", 8: "APOCALYPSE"}
+const FRENZY_FLASH: Array[Color] = [Color(0.78, 0.02, 0.03), Color(0.62, 0.78, 0.42), Color(0.47, 0.34, 0.5)]
 ## Old Standard TT (SIL OFL 1.1), bundled so the web build gets the same period serif.
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 const BuildInfo := preload("res://presentation/build_info.gd")
@@ -29,6 +34,14 @@ var _hud_length := -1
 var _hud_extra := -1  # level, seconds left and foes left, packed into one number
 var _options_from := Screen.TITLE  # where Back in the options leads
 var _last_tick := -1  # last whole second of the level timer that ticked
+var _hitstop := 0.0
+var _last_multiplier := 1
+var _was_frenzy := false
+var _shout: Label
+var _shout_tween: Tween
+var _chain: Label
+var _flash: ColorRect
+var _chain_key := -1  # combo, multiplier and tenths of frenzy shown, packed; text is rebuilt only on change
 var _touch_seen := DisplayServer.is_touchscreen_available()
 
 @onready var _camera: Camera2D = $Camera2D
@@ -58,13 +71,65 @@ func _ready() -> void:
 	_controls.attach(_dpad, _pause_button)
 	Settings.changed.connect(_apply_settings)
 	get_viewport().size_changed.connect(_on_resized)
+	_build_juice()
 	_apply_settings()
 	_new_game()
 	show_title()
 
 
+## The extra HUD pieces for combos and frenzies: a shouted intertitle, a chain counter under the
+## status bar and a full-screen colour flash (under the menus and the film grain).
+func _build_juice() -> void:
+	_flash = ColorRect.new()
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash.visible = false
+	$HUD.add_child(_flash)
+	$HUD.move_child(_flash, 0)
+	_shout = Label.new()
+	_shout.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shout.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_shout.offset_top = 110.0
+	_shout.offset_left = -400.0
+	_shout.offset_right = 400.0
+	_shout.pivot_offset = Vector2(400.0, 30.0)
+	_shout.add_theme_font_override("font", SERIF)
+	_shout.add_theme_font_size_override("font_size", 46)
+	_shout.add_theme_color_override("font_outline_color", Color(0.03, 0.03, 0.03))
+	_shout.add_theme_constant_override("outline_size", 12)
+	_shout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shout.modulate.a = 0.0
+	$HUD.add_child(_shout)
+	_chain = Label.new()
+	_chain.position = Vector2(24.0, 70.0)
+	_chain.add_theme_font_override("font", SERIF)
+	_chain.add_theme_font_size_override("font_size", 24)
+	_chain.add_theme_color_override("font_outline_color", Color(0.03, 0.03, 0.03))
+	_chain.add_theme_constant_override("outline_size", 8)
+	_chain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$HUD.add_child(_chain)
+
+
+## A big intertitle shout that pops in and fades.
+func shout(text: String) -> void:
+	_shout.text = text
+	if _shout_tween:
+		_shout_tween.kill()
+	_shout.modulate.a = 1.0
+	_shout.scale = Vector2(1.5, 1.5)
+	_shout_tween = create_tween()
+	_shout_tween.tween_property(_shout, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_shout_tween.tween_interval(0.7)
+	_shout_tween.tween_property(_shout, "modulate:a", 0.0, 0.4)
+
+
+func shout_text() -> String:
+	return _shout.text if _shout.modulate.a > 0.0 else ""
+
+
 func _process(delta: float) -> void:
-	if screen == Screen.PLAYING:
+	_hitstop = maxf(0.0, _hitstop - delta)
+	if screen == Screen.PLAYING and _hitstop <= 0.0:
 		_accumulator += delta
 		var ticks := 0
 		while _accumulator >= game.tick_interval() and ticks < MAX_TICKS_PER_FRAME:
@@ -96,6 +161,8 @@ func _process(delta: float) -> void:
 	_camera.offset = Vector2(randf() - 0.5, randf() - 0.5) * 18.0 * (_shake / View.SHAKE_TIME)
 	_world.view_rect = _visible_rect()
 	_world.show_markers = Settings.view_fit
+	_world.age_popups(delta)
+	_update_frenzy_look()
 	_world.marker_scale = 1.0 / _camera.zoom.x
 	_world.queue_redraw()
 	_update_hud()
@@ -106,6 +173,7 @@ func _play_events(head_before: Vector2i) -> void:
 	if _pending_eat.x >= 0:  # a new tick started before the last gulp finished
 		_burst_pending_eat()
 	if game.last_eaten.x >= 0:
+		Sound.play(&"chime", -9.0, 0.0, 1.0 + 0.05 * mini(game.combo, 16))
 		_pending_eat = game.last_eaten
 		_world.dying_prey = _pending_eat
 		_world.dying_kind = game.last_eaten_kind
@@ -133,9 +201,11 @@ func _tick_last_seconds() -> void:
 ## Gore for what happened on the enemies' and the level's own clock: enemy deaths (also those from
 ## the player's ticks), the player bitten or out of time.
 func _play_clock_events() -> void:
+	_play_score_events()
 	for cell in game.enemy_deaths:
 		_gore.burst(View.center(cell), 50, 380.0, 4)
-		_shake = View.SHAKE_TIME * 0.6
+		_shake = View.SHAKE_TIME * 0.8
+		_hitstop = HITSTOP
 		Sound.play(&"enemy_die")
 		Sound.play(&"splat")
 	game.enemy_deaths.clear()
@@ -147,6 +217,51 @@ func _play_clock_events() -> void:
 		_gore.burst(View.center(game.last_crash), 60, 420.0, 5)
 		_shake = View.SHAKE_TIME
 		_play_crash_sounds()
+
+
+## Floating scores, shouted combo levels and the start of a frenzy.
+func _play_score_events() -> void:
+	for p in game.popups:
+		_world.add_popup(View.center(p[0]), "+%d" % p[1])
+	game.popups.clear()
+	var m := game.multiplier()
+	if m > _last_multiplier and m > 1:
+		var names: Dictionary = COMBO_NAMES if Settings.gore else COMBO_NAMES.merged(SOFT_NAMES, true)
+		shout("%s  x%d!" % [names[m], m])
+	_last_multiplier = m
+	if game.frenzy_started:
+		game.frenzy_started = false
+		shout("~ FRENZY! ~")
+		Sound.play(&"fanfare", 0.0, 0.0, 1.5)
+
+
+## During a frenzy: the screen flashes in the accent colours, enemies flash and panic, the music
+## races; a chain counter shows under the status bar.
+func _update_frenzy_look() -> void:
+	var frenzy := game.in_frenzy() and screen == Screen.PLAYING
+	_world.frenzy = game.in_frenzy()
+	_flash.visible = frenzy
+	if frenzy:
+		var k := int(Time.get_ticks_msec() / 110) % FRENZY_FLASH.size()
+		var ending := game.frenzy_time < 1.5 and int(Time.get_ticks_msec() / 200) % 2 == 0
+		_flash.color = Color(FRENZY_FLASH[k], 0.0 if ending else 0.2)
+	if frenzy != _was_frenzy and screen == Screen.PLAYING:
+		Sound.play_music(&"game", _game_music_pitch() * (1.2 if frenzy else 1.0))
+	_was_frenzy = frenzy
+	var key := int(game.frenzy_time * 10.0) * 100000 + game.combo * 10 + game.multiplier()
+	if key == _chain_key:
+		return
+	_chain_key = key
+	if game.in_frenzy():
+		_chain.text = "FRENZY  %.1f" % game.frenzy_time
+	elif game.combo > 1:
+		_chain.text = "CHAIN  %d     x%d" % [game.combo, game.multiplier()]
+	else:
+		_chain.text = ""
+
+
+func _game_music_pitch() -> float:
+	return minf(1.3, 1.0 + 0.03 * maxi(0, game.level - 1))
 
 
 func _burst_pending_eat() -> void:
@@ -207,6 +322,8 @@ func _show_highscores() -> void:
 
 const HOW_TO := """Steer with the arrow keys or WASD, by swiping, or with the on-screen arrows.
 Eat chickens to grow. Orange ones make you grow three times as much.
+Eat again quickly to chain meals: the multiplier climbs, and a long chain sets off a FRENZY.
+In a frenzy you are faster, the enemies panic, and a bite anywhere kills them.
 Kill all three enemy snakes before the clock runs out to clear the level.
 Bite an enemy's glowing head from the side to kill it.
 Face to face, the longer snake wins.
@@ -237,6 +354,7 @@ func score_table(mark := -1) -> String:
 func start_run() -> void:
 	_new_game()
 	_set_screen(Screen.PLAYING)
+	shout("~ LEVEL %d ~" % game.level)
 
 
 func resume() -> void:
@@ -287,6 +405,7 @@ func _next_level() -> void:
 	game.start_level(game.level + 1)
 	_on_level_started()
 	resume()
+	shout("~ LEVEL %d ~" % game.level)
 
 
 func _show_options(from: Screen, focus := 0) -> void:
@@ -411,7 +530,7 @@ func _update_music(next: Screen) -> void:
 		Sound.pause_music(false)
 		Sound.play_music(&"title")
 	elif next == Screen.PLAYING:
-		Sound.play_music(&"game", minf(1.3, 1.0 + 0.03 * maxi(0, game.level - 1)))
+		Sound.play_music(&"game", _game_music_pitch() * (1.2 if game.in_frenzy() else 1.0))
 		Sound.pause_music(false)
 	elif next == Screen.OVER:
 		Sound.stop_music()

@@ -992,3 +992,82 @@ func test_whole_arena_view_shows_direction_arrows() -> void:
 	await wait_process_frames(2)
 	assert_gt(world._arrow[0].x, head.x)  # the last arrow drawn points the way its snake heads
 	assert_almost_eq(world._arrow[0].y, head.y, 0.001)
+
+
+func _eat_in_a_row(count: int) -> void:
+	var cells: Array[Vector2i] = []
+	for k in count:
+		cells.append(main.game.body[0] + Vector2i.RIGHT * (k + 1))
+	main.game.set_food(cells)
+	for k in count:
+		main._process(main.game.tick_interval() + 0.001)
+
+
+func test_chains_shout_their_multiplier_and_float_scores() -> void:
+	_eat_in_a_row(3)
+	assert_eq(main.game.multiplier(), 2)
+	assert_eq(main.shout_text(), "CHOMP  x2!")
+	assert_string_contains(main._chain.text, "CHAIN  3")
+	assert_gt(world.popups_showing(), 0)
+	assert_eq(main.game.popups.size(), 0)  # handed over to the view
+
+
+func test_gore_off_softens_the_bloodiest_shouts() -> void:
+	Settings.gore = false
+	main.game.combo = 4 * main.Cfg.COMBO_STEP  # one more link makes x5 (and is not a frenzy link)
+	main.game.combo_time = 1.0
+	_eat_in_a_row(1)
+	assert_eq(main.shout_text(), "FEAST  x5!")
+
+
+func test_frenzy_flashes_and_shouts() -> void:
+	main.game.combo = main.Cfg.FRENZY_EVERY - 1
+	main.game.combo_time = 1.0
+	_eat_in_a_row(1)
+	assert_true(main.game.in_frenzy())
+	assert_eq(main.shout_text(), "~ FRENZY! ~")
+	assert_true(main._flash.visible)
+	assert_true(world.frenzy)
+	assert_string_contains(main._chain.text, "FRENZY")
+	main.game.frenzy_time = 0.0
+	main._process(0.0)
+	assert_false(main._flash.visible)
+
+
+func test_enemy_death_freezes_the_game_for_a_moment() -> void:
+	main.game.enemy_deaths.append(Vector2i(10, 10))
+	main._play_clock_events()
+	assert_gt(main._hitstop, 0.0)
+	var head: Vector2i = main.game.body[0]
+	main._process(0.05)
+	assert_eq(main.game.body[0], head)  # frozen
+	main._process(main.game.tick_interval() + 0.06)
+	assert_ne(main.game.body[0], head)
+
+
+func test_popups_fade_away() -> void:
+	world.add_popup(Vector2(10, 10), "+5")
+	assert_eq(world.popups_showing(), 1)
+	world.age_popups(world.POPUP_SECONDS + 0.1)
+	assert_eq(world.popups_showing(), 0)
+
+
+func test_each_level_is_announced() -> void:
+	main.start_run()
+	assert_eq(main.shout_text(), "~ LEVEL 1 ~")
+	main.game.level_won = true
+	main._process(0.0)
+	main._menu.press("Next level")
+	assert_eq(main.shout_text(), "~ LEVEL 2 ~")
+
+
+func test_frenzy_speeds_the_music_up_and_back_down() -> void:
+	main.start_run()
+	main._process(0.0)
+	var normal: float = Sound._music_pitch
+	main.game.frenzy_time = 3.0
+	main._process(0.0)
+	assert_almost_eq(Sound._music_pitch, normal * 1.2, 0.001)
+	main.game.frenzy_time = 0.0
+	main._process(0.0)
+	assert_almost_eq(Sound._music_pitch, normal, 0.001)

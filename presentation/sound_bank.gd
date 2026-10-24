@@ -8,7 +8,7 @@ const D := preload("res://presentation/sound_direction.gd")
 ## Sound effects that only play with Gore on (spec §11).
 const GORE := [&"crunch", &"splat"]
 const EFFECTS := [&"click", &"gulp", &"squawk", &"crunch", &"splat", &"crash", &"enemy_die", &"life_lost",
-		&"fanfare", &"tick", &"gong"]
+		&"fanfare", &"tick", &"gong", &"chime"]
 const MUSIC := [&"title", &"game"]  # the menu waltz first, it is heard first
 
 
@@ -71,6 +71,10 @@ static func effect(sound: StringName) -> S.Job:
 			j = S.Job.new(0.05)
 			j.note(0.0, 0.04, 1800.0, S.Wave.SINE, 0.7, -1.0, 120.0)
 			j.noise(0.0, 0.01, 0.4, 6000.0, 300.0)
+		&"chime":  # a bell for each link of an eating chain; played higher as the chain grows
+			j = S.Job.new(0.25)
+			j.note(0.0, 0.25, D.degree_hz(4, 1), S.Wave.TRIANGLE, 0.6, -1.0, 14.0)
+			j.note(0.0, 0.25, D.degree_hz(4, 2), S.Wave.SINE, 0.25, -1.0, 18.0)
 		&"gong":  # time up: inharmonic partials ringing out
 			j = S.Job.new(2.2)
 			var base := D.degree_hz(0, -2)

@@ -375,3 +375,94 @@ func test_a_new_hop_is_reported_for_its_squawk() -> void:
 			break
 	assert_gte(game.last_hop.x, 0)
 	assert_gte(game.hop_at(game.last_hop), 0)
+
+
+func _feed_line(count: int) -> void:
+	# Chickens straight ahead of the player, eaten one per tick.
+	var cells: Array[Vector2i] = []
+	for k in count:
+		cells.append(game.body[0] + Vector2i.RIGHT * (k + 1))
+	game.set_food(cells)
+	for k in count:
+		game.tick()
+
+
+func test_quick_meals_chain_into_a_multiplier() -> void:
+	game.set_body(_cells(Vector2i(2, 10), 3, Vector2i.RIGHT))
+	_feed_line(6)
+	assert_eq(game.combo, 6)
+	assert_eq(game.multiplier(), 3)  # x1 for links 1-2, x2 for 3-5, x3 from 6
+	assert_eq(game.score, 1 + 1 + 2 + 2 + 2 + 3)
+	assert_eq(game.popups.size(), 6)
+	assert_eq(game.popups[5], [Vector2i(8, 10), 3])
+
+
+func test_chain_breaks_after_the_window() -> void:
+	game.set_body(_cells(Vector2i(2, 10), 3, Vector2i.RIGHT))
+	_feed_line(2)
+	game.advance(Cfg.COMBO_WINDOW + 0.1)
+	assert_eq(game.combo, 0)
+	assert_eq(game.multiplier(), 1)
+
+
+func test_a_long_chain_sets_off_a_frenzy() -> void:
+	game.set_body(_cells(Vector2i(2, 10), 3, Vector2i.RIGHT))
+	var normal := game.tick_interval()
+	_feed_line(Cfg.FRENZY_EVERY)
+	assert_true(game.in_frenzy())
+	assert_true(game.frenzy_started)
+	assert_lt(game.tick_interval(), normal)
+	game.advance(Cfg.FRENZY_SECONDS + 0.1)
+	assert_false(game.in_frenzy())
+
+
+func test_in_a_frenzy_any_bite_kills() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)
+	var foe := _enemy(Enemy.Species.ANACONDA, _cells(Vector2i(11, 16), 9, Vector2i.DOWN), Vector2i.DOWN)  # tail end at 11,10
+	game.frenzy_time = 3.0
+	game.tick()
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)
+
+
+func test_in_a_frenzy_enemies_run_away() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(10, 7), 12, Vector2i.DOWN), Vector2i.DOWN)  # longer
+	game.frenzy_time = 3.0
+	game._step_enemy(foe)
+	assert_ne(foe.body[0], Vector2i(10, 8))  # turns away instead of coming closer
+	assert_false(game.last_life_lost)
+
+
+func test_death_ends_the_chain_and_the_frenzy() -> void:
+	game.combo = 5
+	game.combo_time = 1.0
+	game.frenzy_time = 2.0
+	game.set_body(_cells(Vector2i(19, 10), 3, Vector2i.RIGHT))
+	game.tick()  # wall
+	assert_eq(game.combo, 0)
+	assert_false(game.in_frenzy())
+
+
+func test_flocks_arrive_in_a_line() -> void:
+	game.set_food([])
+	game._spawn_flock()
+	assert_between(game.foods.size(), Cfg.FLOCK_SIZE.x, Cfg.FLOCK_SIZE.y)
+	var step: Vector2i = game.foods[1] - game.foods[0]
+	assert_eq(absi(step.x) + absi(step.y), 1)
+	for k in range(1, game.foods.size()):
+		assert_eq(game.foods[k] - game.foods[k - 1], step)
+
+
+func test_in_a_frenzy_a_longer_enemy_loses_face_to_face() -> void:
+	game.set_food([])
+	game.set_body(_cells(Vector2i(10, 10), 3, Vector2i.RIGHT))
+	_enemy(Enemy.Species.MAMBA, _cells(Vector2i(3, 3), 3, Vector2i.RIGHT), Vector2i.RIGHT)
+	var foe := _enemy(Enemy.Species.MAMBA, _cells(Vector2i(11, 10), 9, Vector2i.LEFT), Vector2i.LEFT)
+	game.frenzy_time = 3.0
+	game._move_enemy(foe, Vector2i.LEFT)
+	assert_false(foe.alive)
+	assert_false(game.last_life_lost)

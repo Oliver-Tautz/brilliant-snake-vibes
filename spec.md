@@ -85,6 +85,14 @@ Tier 1 is now the chickens above; tiers 2 and 3 are for later.
 - Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.
 - AI is semi-intelligent and cheap: each move scores its three options (towards the nearest chicken, away from walls and bodies, a short flood fill of at most **TBD** cells, suggest 30, to avoid dead ends). No full-grid pathfinding; a fixed cost per enemy move.
 
+## 6c. Chains and Frenzy
+- Eating again within 1.2 s adds a link to a chain. The score multiplier is x1, then one more every 3 links, up to x8; it applies to chickens and enemy kills.
+- Each new multiplier is shouted as an intertitle (CHOMP x2, GOBBLE x3, GLUTTON x4, MASSACRE x5, CARNAGE x6, BLOODBATH x7, APOCALYPSE x8; with Gore off the bloodiest are softened).
+- Every 15 links set off a FRENZY for 6 s: the player moves 25% faster, enemies panic and flash, any bite anywhere on an enemy kills it, the screen flashes in the accent colours (flashing colours allowed here, user's choice), and the music speeds up.
+- Now and then chickens arrive as a flock: a line of 4 to 7 to chain through.
+- Every score floats up from where it was made; an enemy kill freezes the game for a split second.
+- A death or a new level ends the chain and any frenzy.
+
 ## 7. Power-ups
 Dropped only by animals when caught (chance per tier **TBD**).
 

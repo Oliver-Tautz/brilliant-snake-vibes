@@ -40,6 +40,12 @@ var last_crash := Vector2i.ZERO  # the cell the head tried to enter when a life 
 var last_time_up := false
 var last_hop := Vector2i(-1, -1)  # a chicken that started winding up a hop in the last advance()
 var enemy_deaths: Array[Vector2i] = []
+## [cell, points] for every score since the caller last cleared it, for floating score popups.
+var popups: Array = []
+var combo := 0  ## links in the current eating chain
+var combo_time := 0.0  ## seconds left to extend it
+var frenzy_time := 0.0  ## seconds of frenzy left
+var frenzy_started := false  ## a frenzy began since the caller last cleared it
 
 var _pending: Array[Vector2i] = []
 var _grow := 0  # ticks left that keep the tail
@@ -74,6 +80,7 @@ func start_level(n: int) -> void:
 	level = n
 	level_time = 0.0
 	level_won = false
+	_break_chain()
 	var size := arena_size(n)
 	_reset_arena(size.x, size.y)
 	foods_eaten = 0
@@ -125,6 +132,30 @@ func points(base: int) -> int:
 	return base + roundi(level * Cfg.LEVEL_BONUS * base)
 
 
+## The combo multiplier: x1, then one more every COMBO_STEP links, up to MAX_MULTIPLIER.
+func multiplier() -> int:
+	return clampi(1 + combo / Cfg.COMBO_STEP, 1, Cfg.MAX_MULTIPLIER)
+
+
+func in_frenzy() -> bool:
+	return frenzy_time > 0.0
+
+
+func _score(cell: Vector2i, base_points: int) -> void:
+	var gained := base_points * multiplier()
+	score += gained
+	popups.append([cell, gained])
+
+
+## Another link in the eating chain; every FRENZY_EVERY links set off a frenzy.
+func _chain() -> void:
+	combo = combo + 1 if combo_time > 0.0 else 1
+	combo_time = Cfg.COMBO_WINDOW
+	if combo % Cfg.FRENZY_EVERY == 0:
+		frenzy_time = Cfg.FRENZY_SECONDS
+		frenzy_started = true
+
+
 ## What killing an enemy is worth right now: it loses 1 per decay step since the level started.
 func enemy_points() -> int:
 	return maxi(Cfg.ENEMY_MIN_POINTS, points(Cfg.ENEMY_POINTS) - int(level_time / Cfg.ENEMY_DECAY_SECONDS))
@@ -170,8 +201,12 @@ func tick() -> void:
 			last_crash = new_head
 			_lose_life()
 		return
-	var foe = _enemy_bitten(new_head)
-	if foe != null:
+	var foe = _enemy_on(new_head) if in_frenzy() else _enemy_bitten(new_head)
+	if foe != null and in_frenzy():  # in a frenzy any bite kills
+		_kill_enemy(foe)
+		if level_won:
+			return
+	elif foe != null:
 		# Biting the head from the side always kills it. Only when the heads meet head-on does the
 		# longer snake win (a tie goes to the player).
 		var head_on: bool = foe.body[0] == new_head and foe.direction == -direction
@@ -201,7 +236,8 @@ func tick() -> void:
 		last_eaten = new_head
 		last_eaten_kind = kind
 		_grow += _eat(new_head)
-		score += points(Cfg.BIG_POINTS if kind == Food.BIG else Cfg.CHICKEN_POINTS)
+		_chain()
+		_score(new_head, points(Cfg.BIG_POINTS if kind == Food.BIG else Cfg.CHICKEN_POINTS))
 	if _grow > 0:
 		_grow -= 1
 	else:
@@ -214,6 +250,10 @@ func advance(delta: float) -> void:
 	last_life_lost = false
 	last_time_up = false
 	last_hop = Vector2i(-1, -1)
+	combo_time = maxf(0.0, combo_time - delta)
+	if combo_time <= 0.0:
+		combo = 0
+	frenzy_time = maxf(0.0, frenzy_time - delta)
 	if game_over or level_won:
 		return
 	for enemy in enemies:
@@ -233,7 +273,10 @@ func advance(delta: float) -> void:
 		_refill += delta
 		if _refill >= Cfg.REFILL_DELAY:
 			_refill = 0.0
-			_spawn_food()
+			if _rng.randf() < Cfg.FLOCK_CHANCE:
+				_spawn_flock()
+			else:
+				_spawn_food()
 	else:
 		_refill = 0.0
 	if level > 0:
@@ -251,7 +294,8 @@ func advance(delta: float) -> void:
 
 ## Seconds between ticks; shrinks as food is eaten, down to a floor.
 func tick_interval() -> float:
-	return maxf(Cfg.MIN_INTERVAL, Cfg.BASE_INTERVAL - foods_eaten * Cfg.INTERVAL_DECAY)
+	var interval := maxf(Cfg.MIN_INTERVAL, Cfg.BASE_INTERVAL - foods_eaten * Cfg.INTERVAL_DECAY)
+	return interval * (Cfg.FRENZY_SPEED if in_frenzy() else 1.0)
 
 
 func _reset_arena(w: int, h: int) -> void:
@@ -289,7 +333,15 @@ func _eat(cell: Vector2i) -> int:
 	return Cfg.BIG_GROWTH if kind == Food.BIG else 1
 
 
+## A death or a new level ends the chain and any frenzy.
+func _break_chain() -> void:
+	combo = 0
+	combo_time = 0.0
+	frenzy_time = 0.0
+
+
 func _lose_life() -> void:
+	_break_chain()
 	lives -= 1
 	last_life_lost = true
 	if lives <= 0:
@@ -354,6 +406,25 @@ func _fill_chickens() -> void:
 func _is_free(cell: Vector2i) -> bool:
 	var i := _index(cell)
 	return _occupied[i] == 0 and _enemy_cells[i] == 0 and _food_cells[i] == Food.NONE
+
+
+## Now and then a whole flock arrives: a line of chickens to chain through.
+func _spawn_flock() -> void:
+	var dir := DIRS[_rng.randi_range(0, 3)]
+	var count := _rng.randi_range(Cfg.FLOCK_SIZE.x, Cfg.FLOCK_SIZE.y)
+	for _try in 20:
+		var start := Vector2i(_rng.randi_range(0, width - 1), _rng.randi_range(0, height - 1))
+		var ok := true
+		for k in count:
+			var cell := start + dir * k
+			if not _in_bounds(cell) or not _is_free(cell):
+				ok = false
+				break
+		if ok:
+			for k in count:
+				_add_food(start + dir * k)
+			return
+	_spawn_food()
 
 
 ## Adds one chicken (sometimes a big one) on a free cell. Does nothing when the board is full.
@@ -433,6 +504,16 @@ func _enemy_bitten(cell: Vector2i):
 	return null
 
 
+## The enemy with any part of its body on `cell` (bites in a frenzy).
+func _enemy_on(cell: Vector2i):
+	if not _in_bounds(cell) or _enemy_cells[_index(cell)] == 0:
+		return null
+	for enemy in enemies:
+		if enemy.alive and cell in enemy.body:
+			return enemy
+	return null
+
+
 func _enemy_with_head(cell: Vector2i):
 	for enemy in enemies:
 		if enemy.alive and enemy.body[0] == cell:
@@ -457,7 +538,7 @@ func _move_enemy(enemy, dir: Vector2i) -> void:
 	if target == body[0]:  # face to face the longer snake wins (a tie goes to the player); from the side it dies
 		if invulnerable_time > 0.0:
 			return
-		if dir == -direction and enemy.body.size() > body.size():
+		if dir == -direction and enemy.body.size() > body.size() and not in_frenzy():
 			last_crash = target
 			_lose_life()
 		else:
@@ -494,7 +575,7 @@ func _choose_dir(enemy) -> Vector2i:
 		var cell := head + dir
 		if not _in_bounds(cell) or _enemy_cells[_index(cell)] > 0:
 			continue
-		var bite := cell == body[0] and dir == -direction  # it only lunges face to face
+		var bite := cell == body[0] and dir == -direction and not in_frenzy()  # it only lunges face to face
 		if (_occupied[_index(cell)] > 0 and not bite) or (bite and shorter):
 			continue
 		var value := _rng.randf() * 1.5
@@ -506,7 +587,9 @@ func _choose_dir(enemy) -> Vector2i:
 		if room < mini(Cfg.FLOOD_CAP, enemy.body.size()):
 			value -= 500.0 - room
 		var near := absi(body[0].x - cell.x) + absi(body[0].y - cell.y)
-		if shorter and near < Cfg.FLEE_RANGE:
+		if in_frenzy() and near < Cfg.FLEE_RANGE * 2:  # panic: run from the player above all
+			value += near * 40.0
+		elif shorter and near < Cfg.FLEE_RANGE:
 			value += near * Cfg.ENEMY_FLEE[enemy.species]
 		if value > best_score:
 			best_score = value
@@ -557,7 +640,7 @@ func _flood(start: Vector2i) -> int:
 func _kill_enemy(enemy) -> void:
 	enemy.alive = false
 	enemy_deaths.append(enemy.body[0])
-	score += enemy_points()
+	_score(enemy.body[0], enemy_points())
 	for k in enemy.body.size():
 		var cell: Vector2i = enemy.body[k]
 		_enemy_cells[_index(cell)] -= 1

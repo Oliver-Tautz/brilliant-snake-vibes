@@ -450,3 +450,16 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the rule must hold at the speeds the game actually reaches.
 - Source: user screenshot; enemy speeds in logic/game_config.gd
 - Revisit if: it makes killing too easy at low levels.
+
+## 2026-10-24 — opus-no-guardrails: chains, frenzy, flocks and juice
+- Decision: on the branch `opus-no-guardrails` (the user: "make the game as fun as you can ... you can change everything"), modelled on Pac-Man Championship Edition DX, which the user named earlier:
+  - Eating chains: eat again within 1.2 s to extend; the multiplier grows every 3 links up to x8 and multiplies chicken and kill points. Each new multiplier is shouted ("GLUTTON x4!"), softened with Gore off.
+  - Frenzy every 15 links for 6 s: player 25% faster (ticks 0.8x as long); enemies flash, panic and can be bitten anywhere; the screen flashes red / green / purple; the music speeds up 20%.
+  - 12% of refills bring a flock (a line of 4 to 7 chickens).
+  - Juice: floating score popups, a rising chime per link, a 90 ms hit-stop and a stronger shake on kills, "~ LEVEL n ~" shouts, a chain / frenzy counter under the status bar.
+  - Spec §6c is added; How to play mentions chains and frenzy.
+- Tuning by bot simulation: a 2 s window with frenzy every 12 links gave a greedy bot 7–23 frenzies and level 8; with 1.2 s and every 15 it gets 1–15 frenzies and reaches level 6–7 (it reached level 4 before this branch).
+- Decided by: user (the goal, freedom to change anything, flashing colours allowed); claude (everything above)
+- Why: to make the game fast and rewarding, as the user asked.
+- Source: user message; docs/roadmap.md "Later: frenzier gameplay ideas"
+- Revisit if: playtests find frenzies too rare or too strong.

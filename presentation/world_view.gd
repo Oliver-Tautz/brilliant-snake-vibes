@@ -16,6 +16,16 @@ var dying_kind := 0  ## its SnakeGame.Food, since its cell is already empty
 ## their size on screen however far the camera zooms out.
 var show_markers := false
 var marker_scale := 1.0
+var frenzy := false  ## enemies flash and can be bitten anywhere
+
+const POPUPS := 24
+const POPUP_SECONDS := 0.9
+const POPUP_DONE := 10.0  # age a finished popup rests at
+const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
+var _popup_pos := PackedVector2Array()
+var _popup_text := PackedStringArray()
+var _popup_age := PackedFloat32Array()
+var _popup_next := 0
 # Layer switches, used by the benchmark to measure each layer's cost.
 var show_prey := true
 var show_snake := true
@@ -31,6 +41,44 @@ var _inked := PackedVector2Array()
 var _tail := PackedVector2Array()
 var _snout := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
 var _snout_line := PackedVector2Array([Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO])
+
+
+## A floating score ("+12") that rises and fades. Oldest ones are reused, so it never grows.
+func add_popup(at: Vector2, text: String) -> void:
+	if _popup_pos.is_empty():
+		_popup_pos.resize(POPUPS)
+		_popup_text.resize(POPUPS)
+		_popup_age.resize(POPUPS)
+		_popup_age.fill(POPUP_DONE)
+	_popup_pos[_popup_next] = at
+	_popup_text[_popup_next] = text
+	_popup_age[_popup_next] = 0.0
+	_popup_next = (_popup_next + 1) % POPUPS
+
+
+func age_popups(delta: float) -> void:
+	for k in _popup_age.size():
+		_popup_age[k] = minf(POPUP_DONE, _popup_age[k] + delta)
+
+
+func popups_showing() -> int:
+	var count := 0
+	for age in _popup_age:
+		count += int(age < POPUP_SECONDS)  # POPUP_DONE is well past it, so float32 rounding cannot matter
+	return count
+
+
+func _draw_popups() -> void:
+	var size := int(21.0 * maxf(1.0, marker_scale))
+	for k in _popup_age.size():
+		var age := _popup_age[k]
+		if age >= POPUP_SECONDS:
+			continue
+		var fade := 1.0 - age / POPUP_SECONDS
+		var at := _popup_pos[k] + Vector2(-View.CELL, -View.CELL * (0.6 + 1.6 * age))
+		draw_string_outline(SERIF, at, _popup_text[k], HORIZONTAL_ALIGNMENT_CENTER, View.CELL * 2.0, size,
+				int(4 * maxf(1.0, marker_scale)), Color(Ink.INK, fade))
+		draw_string(SERIF, at, _popup_text[k], HORIZONTAL_ALIGNMENT_CENTER, View.CELL * 2.0, size, Color(Ink.PAPER, fade))
 
 
 func _ready() -> void:
@@ -88,6 +136,8 @@ func _draw() -> void:
 		_draw_markers()
 	if show_walls:
 		_draw_walls()
+	if not _popup_pos.is_empty():
+		_draw_popups()
 
 
 func _draw_snake() -> void:
@@ -132,7 +182,9 @@ func _draw_enemy(enemy) -> void:
 			return
 	var id: int = 5000 + enemy.species * 1000
 	var fill: Color = Ink.SNAKE_COLORS[enemy.species]
-	_draw_bite_zone(path)
+	if frenzy:  # panicking: flashing and biteable from head to tail
+		fill = Ink.VULNERABLE if int(Time.get_ticks_msec() / 120) % 2 == 0 else Ink.PAPER
+	_draw_bite_zone(path, path.size() if frenzy else SnakeGame.Cfg.BITE_CELLS)
 	_draw_hose(path, View.BODY_WIDTH * 0.5 * ENEMY_WIDTHS[enemy.species], fill, id)
 	var at := _inked[0]
 	var fwd := Vector2(enemy.direction)
@@ -172,10 +224,10 @@ func _draw_enemy(enemy) -> void:
 ## A pulsing glow behind the cells of an enemy that a bite from the side kills: its head and the next
 ## SnakeGame.Cfg.BITE_CELLS - 1 cells (spec §6b). Muted green is the spec's colour for something
 ## vulnerable (§11).
-func _draw_bite_zone(path: PackedVector2Array) -> void:
+func _draw_bite_zone(path: PackedVector2Array, cells: int) -> void:
 	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * 1.5)
 	var radius := View.CELL * (0.78 + 0.1 * pulse)
-	var last := mini(SnakeGame.Cfg.BITE_CELLS, path.size()) - 1
+	var last := mini(cells, path.size()) - 1
 	for pass_i in 2:  # a thin ink rim, then the glow
 		var r := radius + (View.INK_WIDTH * 0.6 if pass_i == 0 else 0.0)
 		var color := Color(Ink.INK, 0.7) if pass_i == 0 else Color(Ink.VULNERABLE, 0.6 + 0.3 * pulse)

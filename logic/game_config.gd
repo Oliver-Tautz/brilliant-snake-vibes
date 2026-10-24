@@ -42,4 +42,15 @@ const ENEMY_SPEEDUP := 0.9  # interval factor per level: by level 10 they move a
 const ENEMY_FLEE: Array[float] = [1.0, 3.0, 6.0]  # how hard a shorter enemy keeps away from the player's head
 const FLEE_RANGE := 6
 const FLOOD_CAP := 30
+# Combos and frenzy: eat again within COMBO_WINDOW seconds to grow the chain; the multiplier grows
+# every COMBO_STEP links up to MAX_MULTIPLIER. Every FRENZY_EVERY links set off a frenzy: the player is
+# faster and any bite anywhere on an enemy kills it, while the enemies panic.
+const COMBO_WINDOW := 1.2
+const COMBO_STEP := 3
+const MAX_MULTIPLIER := 8
+const FRENZY_EVERY := 15
+const FRENZY_SECONDS := 6.0
+const FRENZY_SPEED := 0.8  # the player's tick interval factor during a frenzy: 25% faster
+const FLOCK_CHANCE := 0.12  # share of refills that bring a whole line of chickens
+const FLOCK_SIZE := Vector2i(4, 7)
 const BITE_CELLS := 3  # the head and the next two cells count as the head: fast enemies slip along between the player's steps
