@@ -240,3 +240,10 @@ func test_bad_saved_sharp_falls_back() -> void:
 	file.set_value("game", "sharp", "very")
 	file.save(TEST_PATH)
 	assert_true(_reloaded().sharp)
+
+
+func test_tutorial_done_is_remembered() -> void:
+	settings.load_settings()
+	assert_false(settings.tutorial_done)
+	settings.set_tutorial_done(true)
+	assert_true(_reloaded().tutorial_done)

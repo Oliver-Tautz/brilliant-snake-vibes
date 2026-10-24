@@ -6,7 +6,7 @@ Status: Draft v0.1. Items marked **TBD** need a decision.
 A browser and phone Snake game with a hand-drawn horror look. The player hunts chickens in an arena that shrinks each level and fights three enemy snakes for them. Delivered as a Godot web build to GitHub Pages via GitHub Actions.
 
 ## 2. Game Loop
-1. Main menu: Play, How to play, Gore (On / Off), Highscores, Options, link to GitHub.
+1. Main menu: Play, How to play, Gore (On / Off), Highscores, Options, link to GitHub. Until a level has been cleared once, the first Play of a session shows How to play first, and level 1 shows a hint line that moves on as the player does (eat, bite the glow from the side, kill all three).
 2. Options: start level, view (follow / fit), on-screen arrows on touch (shown / hidden), fullscreen, audio.
 3. Run: the snake moves, hunts chickens, competes with three enemy snakes, collects power-ups.
 4. Life lost: snake shrinks, brief invulnerability, play continues.
@@ -29,7 +29,7 @@ A browser and phone Snake game with a hand-drawn horror look. The player hunts c
 ## 4. Arena and Screen Size
 - No grid size option: the arena size comes from the level (§5). Level 1 arena size **TBD**.
 - The engine must still support arenas of at least 500 x 500 cells.
-- Default view: the whole arena fits the screen, with an arrow ahead of every snake's head showing where it is going. Player can switch to a camera that follows the snake in options.
+- Default view: the whole arena fits the screen. Player can switch to a camera that follows the snake in options.
 - Zoom scales with arena size (zoom out for larger grids) but the snake never gets smaller than a minimum on-screen size (**TBD** px).
 - Performance rule: no node per cell. Grid is a data array; only visible cells are drawn.
 
@@ -77,9 +77,9 @@ Tier 1 is now the chickens above; tiers 2 and 3 are for later.
 - Contact rules (bodies are walls):
   - Player's head into an enemy's body: the player loses a life.
   - Enemy's head into the player's body: the enemy dies. Trapping them is a way to kill them.
-  - Player's head into an enemy's head from the side: the enemy dies, whatever its length. The two cells right behind its head count as the head too, since fast enemies move up to twice between the player's steps.
+  - Player's head into an enemy's head from the side: the enemy dies, whatever its length. On levels 1 to 5 the cell right behind its head (its neck) counts as the head too; from level 6 only the head does.
   - Head-on (the heads meet face to face): the longer snake wins; on a tie the player wins.
-  - The biteable part (head and the two cells behind it) is marked with a pulsing grey-red glow.
+  - The biteable part is marked with a pulsing grey-red glow and white fangs snapping at it from both sides.
   - Enemies avoid walls, their own bodies and each other; an enemy with no free move dies.
 - Dead enemies burst (gore) and do not come back this level. Their body turns into chickens, one per few segments (**TBD**), tinted in the dead snake's colour; they count as normal chickens.
 - Killable, but a challenge: they steer clear of the player's head when they are shorter, and the faster ones flee.

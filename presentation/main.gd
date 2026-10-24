@@ -29,6 +29,9 @@ var _hud_length := -1
 var _hud_extra := -1  # level, seconds left and foes left, packed into one number
 var _options_from := Screen.TITLE  # where Back in the options leads
 var _last_tick := -1  # last whole second of the level timer that ticked
+var _how_to_offered := false  # this session already showed How to play before a first run
+var _hint_stage := -1  # which first-run hint shows; -1 for none
+var _hint: Label
 var _touch_seen := DisplayServer.is_touchscreen_available()
 
 @onready var _camera: Camera2D = $Camera2D
@@ -58,9 +61,27 @@ func _ready() -> void:
 	_controls.attach(_dpad, _pause_button)
 	Settings.changed.connect(_apply_settings)
 	get_viewport().size_changed.connect(_on_resized)
+	_build_hint()
 	_apply_settings()
 	_new_game()
 	show_title()
+
+
+func _build_hint() -> void:
+	_hint = Label.new()
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_hint.offset_left = -520.0
+	_hint.offset_right = 520.0
+	_hint.offset_top = -64.0
+	_hint.offset_bottom = -24.0
+	_hint.add_theme_font_override("font", SERIF)
+	_hint.add_theme_font_size_override("font_size", 26)
+	_hint.add_theme_color_override("font_outline_color", Color(0.03, 0.03, 0.03))
+	_hint.add_theme_constant_override("outline_size", 10)
+	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint.visible = false
+	$HUD.add_child(_hint)
 
 
 func _process(delta: float) -> void:
@@ -81,6 +102,9 @@ func _process(delta: float) -> void:
 			_show_over()
 		elif game.level_won:
 			Sound.play(&"fanfare")
+			if not Settings.tutorial_done:  # any cleared level, so players starting higher are not nagged
+				Settings.set_tutorial_done(true)
+			_hint_stage = -1
 			_show_break("~ LEVEL %d CLEARED ~" % game.level, "Next level", _next_level)
 		elif game.last_time_up:
 			Sound.play(&"gong")
@@ -95,8 +119,7 @@ func _process(delta: float) -> void:
 	_aim_camera()
 	_camera.offset = Vector2(randf() - 0.5, randf() - 0.5) * 18.0 * (_shake / View.SHAKE_TIME)
 	_world.view_rect = _visible_rect()
-	_world.show_markers = Settings.view_fit
-	_world.marker_scale = 1.0 / _camera.zoom.x
+	_update_hint()
 	_world.queue_redraw()
 	_update_hud()
 
@@ -215,6 +238,12 @@ Each level the enemies get faster and the arena smaller.
 Esc or P pauses."""
 
 
+const HINTS := ["Eat the chickens to grow.",
+		"See the red glow on that snake? Bite it from the side to kill it!",
+		"Kill all three snakes before the clock runs out."]
+const HINT_RANGE := 10  # cells: an enemy this close gets the second hint
+
+
 func _show_how_to() -> void:
 	_set_screen(Screen.TITLE)
 	_menu.show_page("~ HOW TO PLAY ~", [["Back", show_title.bind(1)]], 0, HOW_TO)
@@ -233,10 +262,31 @@ func score_table(mark := -1) -> String:
 	return "\n".join(lines)
 
 
-## A fresh run, straight into play.
+## A fresh run, straight into play. The very first run of a session shows How to play first, until
+## the player has cleared a level once; level 1 then gives hints along the way.
 func start_run() -> void:
+	if not Settings.tutorial_done and not _how_to_offered:
+		_how_to_offered = true
+		_set_screen(Screen.TITLE)
+		_menu.show_page("~ HOW TO PLAY ~", [["Play", start_run]], 0, HOW_TO)
+		return
 	_new_game()
 	_set_screen(Screen.PLAYING)
+	_hint_stage = 0 if not Settings.tutorial_done and game.level == 1 else -1
+
+
+## First-run help in level 1: one line at the bottom of the screen that moves on as the player does.
+func _update_hint() -> void:
+	if _hint_stage == 0:
+		for enemy in game.enemies:
+			if enemy.alive and absi(enemy.body[0].x - game.body[0].x) + absi(enemy.body[0].y - game.body[0].y) <= HINT_RANGE:
+				_hint_stage = 1
+	if _hint_stage == 1 and game.enemies_alive() < game.enemies.size():
+		_hint_stage = 2
+	var showing := _hint_stage >= 0 and screen == Screen.PLAYING
+	_hint.visible = showing
+	if showing and _hint.text != HINTS[_hint_stage]:
+		_hint.text = HINTS[_hint_stage]
 
 
 func resume() -> void:

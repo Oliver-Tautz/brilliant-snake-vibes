@@ -13,7 +13,7 @@ func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
 	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows, Settings.highscores.duplicate(true),
 			Settings.start_level, Settings.view_fit, Settings.music_volume, Settings.sound_volume, Settings.muted,
-			Settings.sharp, get_tree().root.content_scale_mode]
+			Settings.sharp, get_tree().root.content_scale_mode, Settings.tutorial_done]
 	Settings.path = SETTINGS_PATH
 
 
@@ -29,6 +29,7 @@ func after_all() -> void:
 	Settings.muted = _saved_settings[8]
 	Settings.sharp = _saved_settings[9]
 	get_tree().root.content_scale_mode = _saved_settings[10]
+	Settings.tutorial_done = _saved_settings[11]
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
@@ -38,6 +39,7 @@ func before_each() -> void:
 	Settings.highscores.clear()
 	Settings.start_level = 1
 	Settings.view_fit = false
+	Settings.tutorial_done = true  # the first-run help has its own tests
 	main = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
 	world = main.get_node("World")
@@ -975,20 +977,47 @@ func test_how_to_play_card() -> void:
 	assert_true(main._menu.buttons()[1].has_focus())
 
 
-func test_whole_arena_view_shows_direction_arrows() -> void:
+func test_first_play_shows_how_to_play_then_hints_until_level_one_is_cleared() -> void:
+	Settings.tutorial_done = false
+	var fresh: Node2D = load("res://presentation/main.tscn").instantiate()
+	add_child_autofree(fresh)
+	fresh._menu.press("Play")
+	assert_string_contains(fresh._menu.heading(), "HOW TO PLAY")
+	assert_eq(fresh._menu.buttons()[0].text, "Play")
+	fresh._menu.press("Play")
+	assert_eq(fresh.screen, fresh.Screen.PLAYING)
+	fresh._process(0.0)
+	assert_true(fresh._hint.visible)
+	assert_eq(fresh._hint.text, fresh.HINTS[0])
+	# An enemy comes close: the bite hint.
+	var foe = fresh.game.enemies[0]
+	fresh.game.set_body([foe.body[0] + Vector2i(0, 3), foe.body[0] + Vector2i(0, 4), foe.body[0] + Vector2i(0, 5)])
+	fresh._process(0.0)
+	assert_eq(fresh._hint.text, fresh.HINTS[1])
+	foe.alive = false
+	fresh._process(0.0)
+	assert_eq(fresh._hint.text, fresh.HINTS[2])
+	fresh.game.level_won = true
+	fresh._process(0.0)
+	assert_true(Settings.tutorial_done)
+	assert_false(fresh._hint.visible)
+	fresh._menu.press("Next level")
+	fresh._process(0.0)
+	assert_false(fresh._hint.visible)
+
+
+func test_restart_does_not_show_how_to_play_again() -> void:
+	Settings.tutorial_done = false
+	var fresh: Node2D = load("res://presentation/main.tscn").instantiate()
+	add_child_autofree(fresh)
+	fresh._menu.press("Play")
+	fresh._menu.press("Play")
+	fresh._handle_key(KEY_P)
+	fresh._menu.press("Restart")
+	assert_eq(fresh.screen, fresh.Screen.PLAYING)
+
+
+func test_no_hints_once_the_tutorial_is_done() -> void:
 	main.start_run()
 	main._process(0.0)
-	assert_false(world.show_markers)
-	Settings.view_fit = true
-	main._process(0.0)
-	assert_true(world.show_markers)
-	assert_almost_eq(world.marker_scale, 1.0 / main.get_node("Camera2D").zoom.x, 0.0001)
-	assert_gt(world.marker_scale, 1.0)  # zoomed out, so arrows are drawn bigger in world units
-	main.set_game(SnakeGame.new(40, 30, 1))  # no enemies, so the only arrow is the player's
-	main._process(0.0)
-	var head: Vector2 = world._head_pos(main.game.body, main.game.last_tick_moved, world.t)
-	assert_eq(head, world.snake_path()[0])
-	world.queue_redraw()
-	await wait_process_frames(2)
-	assert_gt(world._arrow[0].x, head.x)  # the last arrow drawn points the way its snake heads
-	assert_almost_eq(world._arrow[0].y, head.y, 0.001)
+	assert_false(main._hint.visible)

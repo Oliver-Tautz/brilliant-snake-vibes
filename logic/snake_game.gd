@@ -419,15 +419,19 @@ func hop_at(cell: Vector2i) -> int:
 	return -1
 
 
-## The enemy whose head is at `cell`, or whose head was there a move or two ago (BITE_CELLS): fast
-## enemies move up to twice between the player's steps, so a bite aimed at the head still counts.
+## Cells from an enemy's head that a side bite kills on this level (spec §6b).
+func bite_cells() -> int:
+	return Cfg.BITE_CELLS_EARLY if level <= Cfg.SHRINK_BITE_AFTER else Cfg.BITE_CELLS_LATE
+
+
+## The enemy whose head is at `cell`, or whose neck is there while the bite zone includes it.
 func _enemy_bitten(cell: Vector2i):
 	var foe = _enemy_with_head(cell)
 	if foe != null:
 		return foe
 	for enemy in enemies:
 		if enemy.alive:
-			for k in range(1, mini(Cfg.BITE_CELLS, enemy.body.size())):
+			for k in range(1, mini(bite_cells(), enemy.body.size())):
 				if enemy.body[k] == cell:
 					return enemy
 	return null

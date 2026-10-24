@@ -457,3 +457,15 @@ Append-only. Format is defined in AGENTS.md.
 - Why: user asked for the neck marking to be grey-red instead of green.
 - Source: user message
 - Revisit if: it reads as blood or vanishes against the green anaconda.
+
+## 2026-10-24 — No arrows; smaller bite zone that shrinks after level 5; bite sign; first-run tutorial
+- Decision:
+  - The direction arrows are removed: the user found them bad and chose removal.
+  - The bite zone is the head and neck on levels 1 to 5 (Cfg.BITE_CELLS_EARLY = 2) and only the head from level 6 (BITE_CELLS_LATE = 1). This replaces the head-plus-two-cells zone, which the user found too big.
+  - The glow keeps the other session's grey-red (the user chose it), drawn a little tighter, with two pairs of white fangs snapping at it from both sides as a "bite here" sign.
+  - First-run tutorial: until the player clears any level once (Settings.tutorial_done, saved), the first Play of a session shows How to play with a Play button. Level 1 then shows one hint line at the bottom that moves on: eat chickens → (an enemy within 10 cells) bite the red glow from the side → (first kill) kill all three before the clock runs out.
+  - This work is on feature/worker-sonnet-opus-review, on top of the other session's commits bb87df0 and 7df0fce (the user's choice).
+- Decided by: user (remove arrows, zone too big and shrinking after level 5, keep the grey-red, make the kill zone clear, tutorial missing, which branch); claude (2 / 1 cells, the fangs, the hint flow); worker: none (the small settings change was done directly)
+- Why: user feedback after playing.
+- Source: user messages
+- Revisit if: the hints are too chatty or the late-level head-only zone is too hard.
