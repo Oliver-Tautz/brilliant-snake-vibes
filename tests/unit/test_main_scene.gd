@@ -11,19 +11,19 @@ var _saved_settings: Array
 
 func before_all() -> void:
 	# Menu tests change settings; keep them away from the player's real settings file.
-	_saved_settings = [Settings.path, Settings.violence, Settings.show_arrows]
+	_saved_settings = [Settings.path, Settings.gore, Settings.show_arrows]
 	Settings.path = SETTINGS_PATH
 
 
 func after_all() -> void:
 	Settings.path = _saved_settings[0]
-	Settings.violence = _saved_settings[1]
+	Settings.gore = _saved_settings[1]
 	Settings.show_arrows = _saved_settings[2]
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
 func before_each() -> void:
-	Settings.violence = Settings.Violence.FULL
+	Settings.gore = true
 	Settings.show_arrows = true
 	main = load("res://presentation/main.tscn").instantiate()
 	add_child_autofree(main)
@@ -119,19 +119,19 @@ func test_pause_menu_resume_and_restart() -> void:
 	assert_eq(main.game.score, 0)
 
 
-func test_options_cycle_violence_and_save_it() -> void:
+func test_options_switch_gore_and_save_it() -> void:
 	main._handle_key(KEY_P)
 	main._menu.press("Options")
 	assert_eq(main.screen, main.Screen.OPTIONS)
-	main._menu.press("Violence: Full")
-	assert_eq(Settings.violence, Settings.Violence.LOW)
-	assert_eq(main.get_node("Gore").violence, Settings.Violence.LOW)
-	main._menu.press("Violence: Low")
-	main._menu.press("Violence: None")
-	assert_eq(Settings.violence, Settings.Violence.FULL)
+	main._menu.press("Gore: On")
+	assert_false(Settings.gore)
+	assert_false(main.get_node("Gore").gore)
+	main._menu.press("Gore: Off")
+	assert_true(Settings.gore)
 	assert_true(main._menu.buttons()[0].has_focus())  # rebuilt page keeps the keyboard's place
 	var saved := ConfigFile.new()
 	assert_eq(saved.load(SETTINGS_PATH), OK)
+	assert_true(saved.get_value("game", "gore"))
 
 
 func test_options_hide_the_arrows() -> void:
@@ -632,21 +632,9 @@ func test_build_label_shows_which_build_this_is() -> void:
 	assert_ne(label.text, "")
 
 
-func test_low_violence_is_ink_without_bones() -> void:
+func test_gore_off_is_dust_and_stars_without_stains() -> void:
 	var gore = main.get_node("Gore")
-	gore.set_violence(Settings.Violence.LOW)
-	gore.burst(Vector2(100, 100), 20, 200.0, 3)
-	assert_eq(gore._bone_count, 0)
-	assert_gt(gore._splat_count, 0)
-	assert_eq(gore._tint, Ink.INK)  # no red
-	gore._process(gore.LOW_SPLAT_LIFETIME + 1.0)
-	gore._process(gore.LOW_SPLAT_LIFETIME + 1.0)
-	assert_false(gore.is_active())  # ink fades fast
-
-
-func test_no_violence_is_dust_and_stars_without_stains() -> void:
-	var gore = main.get_node("Gore")
-	gore.set_violence(Settings.Violence.NONE)
+	gore.set_gore(false)
 	gore.burst(Vector2(100, 100), 20, 200.0, 0)
 	assert_eq(gore._bone_count, gore.STARS)
 	assert_eq(gore._splat_count, 0)
@@ -658,12 +646,12 @@ func test_no_violence_is_dust_and_stars_without_stains() -> void:
 	assert_true(is_instance_valid(gore))
 
 
-func test_choosing_gentler_violence_wipes_the_blood() -> void:
+func test_switching_gore_off_wipes_the_blood() -> void:
 	var gore = main.get_node("Gore")
 	gore.burst(Vector2(100, 100), 20, 200.0, 2)
 	assert_gt(gore.active_count(), 0)
-	Settings.set_violence(Settings.Violence.LOW)
-	assert_eq(gore.violence, Settings.Violence.LOW)
+	Settings.set_gore(false)
+	assert_false(gore.gore)
 	assert_eq(gore.active_count(), 0)
 
 

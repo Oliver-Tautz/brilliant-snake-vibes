@@ -9,7 +9,6 @@ const MAX_TICKS_PER_FRAME := 5
 const SERIF := preload("res://presentation/fonts/OldStandard-Regular.ttf")
 const BuildInfo := preload("res://presentation/build_info.gd")
 const GITHUB := "https://github.com/Oliver-Tautz/brilliant-snake-vibes"
-const VIOLENCE_NAMES := ["Full", "Low", "None"]
 
 enum Screen { TITLE, PLAYING, PAUSED, OPTIONS, OVER }
 
@@ -176,7 +175,7 @@ func _show_options(from: Screen, focus := 0) -> void:
 	_options_from = from
 	_set_screen(Screen.OPTIONS)
 	var items := [
-		["Violence: %s" % VIOLENCE_NAMES[Settings.violence], _next_violence],
+		["Gore: %s" % ("On" if Settings.gore else "Off"), _toggle_gore],
 		["Arrows on touch: %s" % ("Shown" if Settings.show_arrows else "Hidden"), _toggle_arrows],
 	]
 	if can_fullscreen():
@@ -185,8 +184,8 @@ func _show_options(from: Screen, focus := 0) -> void:
 	_menu.show_page("~ OPTIONS ~", items, focus)
 
 
-func _next_violence() -> void:
-	Settings.set_violence((Settings.violence + 1) % VIOLENCE_NAMES.size())
+func _toggle_gore() -> void:
+	Settings.set_gore(not Settings.gore)
 	_show_options(_options_from, 0)
 
 
@@ -251,7 +250,7 @@ func _update_dpad() -> void:
 
 
 func _apply_settings() -> void:
-	_gore.set_violence(Settings.violence)
+	_gore.set_gore(Settings.gore)
 	_update_dpad()
 
 

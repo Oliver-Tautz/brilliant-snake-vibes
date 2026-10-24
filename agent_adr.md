@@ -285,3 +285,10 @@ Append-only. Format is defined in AGENTS.md.
 - Why: the death splatter froze mid-air; a resting thumb blocked menu taps.
 - Source: reviewer findings
 - Revisit if: the tablet test shows menu or fullscreen problems.
+
+## 2026-10-24 — Gore is on/off, not three levels
+- Decision: the Violence option (Full / Low / None) is replaced by "Gore: On / Off" (default On), saved as `gore` in the settings file. Off is the former None look: a small grey dust puff with spinning stars, no blood, no bones, no stains. The Low level is gone. This supersedes the violence levels in "Menus and violence levels" above.
+- Decided by: user ("I just want the gore to be on/off"); claude (Off keeps the dust-and-stars look)
+- Why: the user rejected the three-level spec text.
+- Source: user answer to the suggested §11 change
+- Revisit if: the user wants Off to show no effect at all. (The old saved `violence` key is not migrated: the build that wrote it was never pushed.)
